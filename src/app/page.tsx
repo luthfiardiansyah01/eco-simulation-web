@@ -1,69 +1,59 @@
-import Image from "next/image";
+import Link from 'next/link'
+import AuthButton from '@/components/layout/AuthButton'
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen flex flex-col items-center justify-center p-8">
+      <div className="text-center max-w-2xl w-full">
+        <h1 className="text-4xl font-bold tracking-widest mb-4">ECO-SIMULATION INTERFACE</h1>
+        <div className="flex justify-between text-sm mb-12">
+          <span>Status: <span className="text-green-400">ONLINE</span></span>
+          <AuthButton />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <h2 className="text-sm tracking-widest mb-8 text-gray-300">SELECT SIMULATION MODE</h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Link href="/region">
+            <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded p-6 hover:bg-[var(--bg-card-hover)] transition-colors cursor-pointer h-full flex flex-col">
+              <h3 className="text-lg font-bold tracking-widest mb-4">ADVENTURE MODE</h3>
+              <p className="text-sm text-gray-300 mb-4">
+                Story-driven ecosystem simulation with dynamic environmental events.
+              </p>
+              <div className="text-xs text-gray-400 space-y-1 mb-6 flex-1">
+                <p>Difficulty : <span className="text-red-400">HARD</span></p>
+                <p>Biomass &nbsp;&nbsp;: <span className="text-white">82%</span></p>
+                <p>Climate &nbsp;&nbsp;: <span className="text-white">Dynamic</span></p>
+              </div>
+              <button className="w-full border border-gray-400 text-sm py-1 hover:bg-white hover:text-black transition-colors">
+                SELECT
+              </button>
+            </div>
+          </Link>
+
+          <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded p-6 opacity-50 cursor-not-allowed flex flex-col">
+            <h3 className="text-lg font-bold tracking-widest mb-4">CLASSIC FREE ROAM</h3>
+            <p className="text-sm text-gray-300 mb-4">
+              Explore the ecosystem freely without objectives.
+            </p>
+            <div className="text-xs text-gray-400 space-y-1 mb-6 flex-1">
+              <p>Difficulty : <span className="text-green-400">RELAXED</span></p>
+              <p>Biomass &nbsp;&nbsp;: <span className="text-white">∞</span></p>
+              <p>Climate &nbsp;&nbsp;: <span className="text-white">Manual</span></p>
+            </div>
+            <button className="w-full border border-gray-600 text-sm py-1 text-gray-500 cursor-not-allowed">
+              COMING SOON
+            </button>
+          </div>
         </div>
-      </main>
-    </div>
-  );
+
+        <div className="flex justify-between mt-10 text-xs text-gray-400">
+          <span>[TAB] SWITCH MODE</span>
+          <Link href="/region" className="text-green-400 hover:text-green-300">
+            [ENTER] START SIMULATION →
+          </Link>
+        </div>
+      </div>
+    </main>
+  )
 }
