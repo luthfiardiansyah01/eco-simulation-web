@@ -1,25 +1,65 @@
 import Link from 'next/link'
-import { REGIONS } from '@/data/regions'
+import Image from 'next/image'
+import { REGIONS, MISSION_LEVELS } from '@/data/regions'
+import { getAllProgressServer } from '@/lib/supabase/progress-server'
 
-export default function RegionPage() {
+export const dynamic = 'force-dynamic'
+
+export default async function RegionPage() {
+  const allProgress = await getAllProgressServer()
+
+  const regions = REGIONS.map((region) => {
+    const progress = allProgress.find((p) => p.regionId === region.id)
+    const totalLevels = MISSION_LEVELS[region.id]?.length ?? 10
+    const completedCount = progress?.completedLevels.length ?? 0
+    const completionPct = Math.round((completedCount / totalLevels) * 100)
+    return { ...region, completionPct, completedCount, totalLevels }
+  })
+
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-8">
       <div className="text-center max-w-4xl w-full">
-        <h1 className="text-4xl font-bold tracking-widest mb-2">ECO-SIMULATION INTERFACE</h1>
+        <h1 className="text-4xl font-bold tracking-widest mb-4">ECO-SIMULATION INTERFACE</h1>
         <div className="flex justify-between text-sm mb-10">
           <span>Status: <span className="text-green-400">ONLINE</span></span>
-          <span>User: <span className="text-white">Guest</span></span>
         </div>
 
         <h2 className="text-sm tracking-widest mb-8 text-gray-300">SELECT ADVENTURE REGION</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {REGIONS.map((region) => (
-            <div key={region.id} className={`bg-[var(--bg-card)] border border-[var(--border-card)] rounded p-4 flex flex-col ${!region.unlocked ? 'opacity-50' : ''}`}>
+          {regions.map((region) => (
+            <div
+              key={region.id}
+              className={`bg-[var(--bg-card)] border border-[var(--border-card)] rounded p-4 flex flex-col transition-colors
+                ${region.unlocked ? 'hover:border-green-600' : 'opacity-50'}`}
+            >
               <h3 className="text-base font-bold tracking-widest mb-3">{region.name.toUpperCase()}</h3>
 
-              <div className="bg-gray-600 rounded mb-3 h-36 flex items-center justify-center text-gray-400 text-sm">
-                {region.location}
+              {/* Region image */}
+              <div className="rounded mb-3 h-36 relative overflow-hidden bg-gray-700">
+                <Image
+                  src={region.image}
+                  alt={region.location}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                />
+                {region.completionPct > 0 && (
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-600/60">
+                    <div
+                      className="h-1 bg-green-500 transition-all"
+                      style={{ width: `${region.completionPct}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Progress */}
+              <div className="flex justify-between text-xs mb-3">
+                <span className="text-gray-400">{region.completedCount}/{region.totalLevels} levels</span>
+                <span className={region.completionPct > 0 ? 'text-green-400' : 'text-gray-500'}>
+                  {region.completionPct}%
+                </span>
               </div>
 
               <ul className="text-xs text-gray-300 space-y-1 mb-4 flex-1 text-left">
