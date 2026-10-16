@@ -6,6 +6,7 @@ import { Mission, EnvironmentStatus, EventLog, GameAction, Achievement } from '@
 import { saveProgress, saveMissionResult } from '@/lib/supabase/progress'
 import { checkAndUnlockAchievements } from '@/lib/supabase/achievements'
 import AchievementToast from '@/components/game/AchievementToast'
+import IsometricMap from '@/components/game/IsometricMap'
 
 const ACTIONS: { emoji: string; label: string; desc: string; action: GameAction; cost: string }[] = [
   { emoji: '🗑️', label: 'Bersihkan Sampah', desc: '-50 💰 | -5% polusi', action: 'clean_waste', cost: '50' },
@@ -269,18 +270,35 @@ export default function GameplayClient({
         {/* Center — event log */}
         <div className="flex-1 flex flex-col border-r" style={{ borderColor: '#1a3a2e', background: '#0a1a14' }}>
 
-          {/* Map placeholder */}
-          <div className="flex-1 flex items-center justify-center relative p-4">
-            <div className="text-center">
-              <div className="text-5xl mb-3 float">🗺️</div>
-              <p className="text-sm text-[var(--text-muted)] mb-1">Peta Isometrik</p>
-              <p className="text-[10px] text-[var(--text-muted)] opacity-50">[Segera hadir di Phase 3]</p>
-              {lastAction && (
-                <div className="mt-4 badge badge-green text-xs py-1 px-3">
-                  Aksi terakhir: {lastAction}
-                </div>
-              )}
-            </div>
+          {/* Isometric Map */}
+          <div className="flex-1 relative overflow-hidden">
+            <IsometricMap
+              pollution={status.pollution}
+              biodiversity={status.biodiversity}
+              waterQuality={status.waterQuality}
+              trees={status.trees}
+              onTileClick={(type) => {
+                const msgs: Record<string, string> = {
+                  water: 'Sungai terdeteksi — scan kualitas air',
+                  grass: 'Area hijau — cocok untuk tanam pohon',
+                  tree: 'Pohon teridentifikasi — biodiversitas meningkat',
+                  polluted: 'Area tercemar — perlu dibersihkan segera!',
+                  dirt: 'Tanah kosong — bisa dimanfaatkan',
+                }
+                const newLog: EventLog = {
+                  id: Date.now().toString(),
+                  type: type === 'polluted' ? 'alert' : 'info',
+                  message: msgs[type] ?? `Tile ${type} dipilih`,
+                  timestamp: new Date(),
+                }
+                setLogs((prev) => [newLog, ...prev.slice(0, 9)])
+              }}
+            />
+            {lastAction && (
+              <div className="absolute top-2 right-2">
+                <span className="badge badge-green text-[10px]">▶ {lastAction}</span>
+              </div>
+            )}
           </div>
 
           {/* Event log */}
