@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'out',
   server: {
     // Replace with your Vercel deployment URL after deploying
-    url: 'https://eco-simulation-feq8d3c75-luthfiardiansyah01s-projects.vercel.app',
+    url: 'https://eco-simulation-web.vercel.app',
     cleartext: false,
   },
   android: {

@@ -13,56 +13,97 @@ export default async function BriefingPage({
   const mission = MISSIONS.find((m) => m.regionId === regionId && m.level === parseInt(level))
   if (!mission) notFound()
 
+  const regionMeta: Record<string, { emoji: string; color: string }> = {
+    'west-java':    { emoji: '🏔️', color: 'from-green-900/40 to-teal-900/20' },
+    'central-java': { emoji: '🌾', color: 'from-amber-900/40 to-green-900/20' },
+    'east-java':    { emoji: '🌊', color: 'from-blue-900/40 to-teal-900/20' },
+  }
+  const meta = regionMeta[regionId] ?? { emoji: '🌿', color: 'from-green-900/40 to-teal-900/20' }
+
+  const objectiveIcons = ['🎯', '🔬', '🌱', '💧', '📊', '🦋']
+  const rewardIcons = ['⭐', '🏆', '💎', '🔓', '🌿', '📈']
+
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-8">
-      <div className="max-w-2xl w-full">
-        <h1 className="text-3xl font-bold tracking-widest mb-8 text-center">STORY BRIEFING</h1>
+    <main className="min-h-screen p-6 relative overflow-hidden">
+      <div className="absolute top-[-60px] right-[-60px] w-72 h-72 rounded-full bg-green-900/15 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-[-60px] left-[-60px] w-72 h-72 rounded-full bg-teal-900/15 blur-3xl pointer-events-none" />
 
-        <div className="space-y-4 text-sm">
-          <div className="space-y-1">
-            <p className="text-gray-400 tracking-widest">LOCATION : <span className="text-white">{mission.location.toUpperCase()}</span></p>
-            <p className="text-gray-400 tracking-widest">LEVEL &nbsp;&nbsp;&nbsp;: <span className="text-white">{mission.level}</span></p>
-            <p className="text-gray-400 tracking-widest">MISSION &nbsp;: <span className="text-white">{mission.title.toUpperCase()}</span></p>
-          </div>
+      <div className="max-w-2xl mx-auto relative z-10">
 
-          <p className="text-base leading-relaxed text-gray-200 py-2">
-            {mission.story}
-          </p>
+        {/* Back nav */}
+        <Link href={`/mission/${regionId}`} className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)] hover:text-[var(--accent-green)] transition-colors mb-5">
+          ← Kembali ke Daftar Misi
+        </Link>
 
-          <div>
-            <p className="text-gray-400 tracking-widest mb-2">OBJECTIVES</p>
-            <ul className="space-y-1">
-              {mission.objectives.map((obj) => (
-                <li key={obj} className="flex items-center gap-2">
-                  <span className="w-3 h-3 border border-gray-400 inline-block flex-shrink-0" />
-                  <span>{obj}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <p className="text-gray-400 tracking-widest mb-2">REWARDS</p>
-            <ul className="space-y-1">
-              {mission.rewards.map((reward) => (
-                <li key={reward} className="flex items-center gap-2">
-                  <span className="w-3 h-3 border border-gray-400 inline-block flex-shrink-0" />
-                  <span>{reward}</span>
-                </li>
-              ))}
-            </ul>
+        {/* Mission header */}
+        <div className={`eco-card bg-gradient-to-br ${meta.color} p-5 mb-4`}>
+          <div className="flex items-start gap-3">
+            <span className="text-4xl mt-1">{meta.emoji}</span>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <span className="badge badge-teal">Level {mission.level}</span>
+                <span className="badge badge-amber">⭐ +250 pts</span>
+              </div>
+              <h1 className="text-xl font-bold text-white mb-1">{mission.title}</h1>
+              <p className="text-xs text-[var(--text-muted)]">📍 {mission.location}</p>
+            </div>
           </div>
         </div>
 
-        <div className="flex justify-between mt-10 text-xs text-gray-400">
-          <Link href={`/mission/${regionId}`} className="flex items-center gap-2 hover:text-white transition-colors">
-            <span className="text-red-400">←</span> [ESC] BACK
+        {/* Story */}
+        <div className="eco-card p-5 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-lg">📖</span>
+            <h2 className="text-sm font-semibold text-[var(--accent-green)] tracking-wide uppercase">Latar Belakang</h2>
+          </div>
+          <p className="text-sm leading-relaxed text-[var(--foreground)] opacity-90">
+            {mission.story}
+          </p>
+        </div>
+
+        {/* Objectives */}
+        <div className="eco-card p-5 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-lg">🎯</span>
+            <h2 className="text-sm font-semibold text-[var(--accent-teal)] tracking-wide uppercase">Objektif Misi</h2>
+          </div>
+          <ul className="space-y-2.5">
+            {mission.objectives.map((obj, i) => (
+              <li key={obj} className="flex items-start gap-3">
+                <span className="text-base mt-0.5 flex-shrink-0">{objectiveIcons[i] ?? '•'}</span>
+                <span className="text-sm text-[var(--foreground)] opacity-85">{obj}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Rewards */}
+        <div className="eco-card p-5 mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-lg">🏆</span>
+            <h2 className="text-sm font-semibold text-[var(--accent-amber)] tracking-wide uppercase">Hadiah</h2>
+          </div>
+          <ul className="space-y-2.5">
+            {mission.rewards.map((reward, i) => (
+              <li key={reward} className="flex items-start gap-3">
+                <span className="text-base mt-0.5 flex-shrink-0">{rewardIcons[i] ?? '•'}</span>
+                <span className="text-sm text-[var(--foreground)] opacity-85">{reward}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex gap-3">
+          <Link href={`/mission/${regionId}`} className="flex-1">
+            <button className="eco-btn-secondary w-full py-3 text-sm">
+              ← Kembali
+            </button>
           </Link>
-          <Link
-            href={`/play/${regionId}/${level}`}
-            className="flex items-center gap-2 text-green-400 hover:text-green-300 transition-colors"
-          >
-            [ENTER] BEGIN SIMULATION →
+          <Link href={`/play/${regionId}/${level}`} className="flex-2 w-full" style={{ flex: 2 }}>
+            <button className="eco-btn-primary w-full py-3 text-sm">
+              ▶ Mulai Simulasi
+            </button>
           </Link>
         </div>
       </div>
