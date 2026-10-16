@@ -3,56 +3,103 @@ import AuthButton from '@/components/layout/AuthButton'
 
 export default function Home() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-8">
-      <div className="text-center max-w-2xl w-full">
-        <h1 className="text-4xl font-bold tracking-widest mb-4">ECO-SIMULATION INTERFACE</h1>
-        <div className="flex justify-between text-sm mb-12">
-          <span>Status: <span className="text-green-400">ONLINE</span></span>
-          <AuthButton />
+    <main className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
+
+      {/* Decorative background circles */}
+      <div className="absolute top-[-80px] left-[-80px] w-64 h-64 rounded-full bg-green-900/20 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-[-80px] right-[-80px] w-64 h-64 rounded-full bg-teal-900/20 blur-3xl pointer-events-none" />
+
+      <div className="w-full max-w-2xl relative z-10">
+
+        {/* Header */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center gap-2 mb-4">
+            <span className="text-3xl float">🌿</span>
+            <h1 className="text-3xl md:text-4xl font-bold shimmer-text tracking-wide">
+              EcoSim
+            </h1>
+            <span className="text-3xl float" style={{ animationDelay: '1s' }}>🌊</span>
+          </div>
+          <p className="text-sm text-[var(--text-muted)] mb-4">River Ecosystem Simulation</p>
+          <div className="flex items-center justify-center gap-3 text-xs">
+            <span className="badge badge-green">● ONLINE</span>
+            <AuthButton />
+          </div>
         </div>
 
-        <h2 className="text-sm tracking-widest mb-8 text-gray-300">SELECT SIMULATION MODE</h2>
+        {/* Mode label */}
+        <p className="text-center text-xs tracking-widest text-[var(--text-muted)] uppercase mb-6">
+          — Pilih Mode Simulasi —
+        </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Link href="/region">
-            <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded p-6 hover:bg-[var(--bg-card-hover)] transition-colors cursor-pointer h-full flex flex-col">
-              <h3 className="text-lg font-bold tracking-widest mb-4">ADVENTURE MODE</h3>
-              <p className="text-sm text-gray-300 mb-4">
-                Story-driven ecosystem simulation with dynamic environmental events.
-              </p>
-              <div className="text-xs text-gray-400 space-y-1 mb-6 flex-1">
-                <p>Difficulty : <span className="text-red-400">HARD</span></p>
-                <p>Biomass &nbsp;&nbsp;: <span className="text-white">82%</span></p>
-                <p>Climate &nbsp;&nbsp;: <span className="text-white">Dynamic</span></p>
+        {/* Mode cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+          {/* Adventure Mode */}
+          <Link href="/region" className="block">
+            <div className="eco-card p-6 cursor-pointer h-full flex flex-col glow-pulse">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-2xl">🗺️</span>
+                <span className="badge badge-red">HARD</span>
               </div>
-              <button className="w-full border border-gray-400 text-sm py-1 hover:bg-white hover:text-black transition-colors">
-                SELECT
+              <h3 className="text-lg font-bold text-white mb-2">Adventure Mode</h3>
+              <p className="text-sm text-[var(--text-muted)] mb-4 flex-1">
+                Selesaikan misi pemulihan ekosistem sungai di 3 wilayah Jawa dengan tantangan lingkungan dinamis.
+              </p>
+              <div className="space-y-2 mb-5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-[var(--text-muted)]">Biomass</span>
+                  <span className="text-[var(--accent-green)]">82%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[var(--text-muted)]">Iklim</span>
+                  <span className="text-white">Dinamis</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[var(--text-muted)]">Wilayah</span>
+                  <span className="text-[var(--accent-teal)]">3 Region</span>
+                </div>
+              </div>
+              <button className="eco-btn-primary w-full py-2.5 text-sm">
+                ▶ Mulai Petualangan
               </button>
             </div>
           </Link>
 
-          <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded p-6 opacity-50 cursor-not-allowed flex flex-col">
-            <h3 className="text-lg font-bold tracking-widest mb-4">CLASSIC FREE ROAM</h3>
-            <p className="text-sm text-gray-300 mb-4">
-              Explore the ecosystem freely without objectives.
-            </p>
-            <div className="text-xs text-gray-400 space-y-1 mb-6 flex-1">
-              <p>Difficulty : <span className="text-green-400">RELAXED</span></p>
-              <p>Biomass &nbsp;&nbsp;: <span className="text-white">∞</span></p>
-              <p>Climate &nbsp;&nbsp;: <span className="text-white">Manual</span></p>
+          {/* Classic Free Roam */}
+          <div className="eco-card p-6 opacity-50 flex flex-col">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-2xl">🏕️</span>
+              <span className="badge badge-green">RELAXED</span>
             </div>
-            <button className="w-full border border-gray-600 text-sm py-1 text-gray-500 cursor-not-allowed">
-              COMING SOON
+            <h3 className="text-lg font-bold text-white mb-2">Classic Free Roam</h3>
+            <p className="text-sm text-[var(--text-muted)] mb-4 flex-1">
+              Jelajahi ekosistem secara bebas tanpa objektif. Kreasi sebebasnya seperti sandbox.
+            </p>
+            <div className="space-y-2 mb-5 text-xs">
+              <div className="flex justify-between">
+                <span className="text-[var(--text-muted)]">Biomass</span>
+                <span className="text-[var(--accent-green)]">∞</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[var(--text-muted)]">Iklim</span>
+                <span className="text-white">Manual</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[var(--text-muted)]">Wilayah</span>
+                <span className="text-[var(--accent-teal)]">Bebas</span>
+              </div>
+            </div>
+            <button className="eco-btn-secondary w-full py-2.5 text-sm cursor-not-allowed opacity-60">
+              🔒 Segera Hadir
             </button>
           </div>
         </div>
 
-        <div className="flex justify-between mt-10 text-xs text-gray-400">
-          <span>[TAB] SWITCH MODE</span>
-          <Link href="/region" className="text-green-400 hover:text-green-300">
-            [ENTER] START SIMULATION →
-          </Link>
-        </div>
+        {/* Footer hint */}
+        <p className="text-center text-xs text-[var(--text-muted)] mt-8">
+          Selamatkan ekosistem sungai Jawa — satu misi dalam satu waktu 🌱
+        </p>
       </div>
     </main>
   )

@@ -25,20 +25,21 @@ export default function AuthButton() {
 
   if (user) {
     return (
-      <div className="flex items-center gap-3 text-sm">
-        <Link href="/profile" className="text-green-400 hover:text-green-300 transition-colors">
-          {user.email?.split('@')[0].toUpperCase()}
+      <div className="flex items-center gap-2">
+        <Link href="/profile" className="flex items-center gap-1.5 badge badge-green hover:opacity-80 transition-opacity">
+          <span>🌿</span>
+          <span>{user.email?.split('@')[0]}</span>
         </Link>
-        <button onClick={handleSignOut} className="text-gray-400 hover:text-red-400 text-xs transition-colors">
-          [SIGN OUT]
+        <button onClick={handleSignOut} className="badge badge-gray hover:badge-red transition-colors text-[10px]">
+          Keluar
         </button>
       </div>
     )
   }
 
   return (
-    <Link href="/login" className="text-gray-400 hover:text-green-400 text-sm transition-colors">
-      [SIGN IN]
+    <Link href="/login" className="badge badge-teal hover:opacity-80 transition-opacity">
+      Masuk
     </Link>
   )
 }

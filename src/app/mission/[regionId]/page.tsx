@@ -10,14 +10,13 @@ export default async function MissionPage({ params }: { params: Promise<{ region
   const baseLevels = MISSION_LEVELS[regionId]
   if (!baseLevels) notFound()
 
-  const regionNames: Record<string, string> = {
-    'west-java': 'Bandung',
-    'central-java': 'Semarang',
-    'east-java': 'Surabaya',
+  const regionMeta: Record<string, { name: string; emoji: string; color: string }> = {
+    'west-java':    { name: 'West Java',    emoji: '🏔️', color: 'from-green-900/50 to-teal-900/30' },
+    'central-java': { name: 'Central Java', emoji: '🌾', color: 'from-amber-900/50 to-green-900/30' },
+    'east-java':    { name: 'East Java',    emoji: '🌊', color: 'from-blue-900/50 to-teal-900/30' },
   }
-  const regionName = regionNames[regionId] ?? regionId
+  const meta = regionMeta[regionId] ?? { name: regionId, emoji: '🌿', color: 'from-green-900/50 to-teal-900/30' }
 
-  // Ambil progress dari Supabase; guest hanya bisa level 1
   const progress = await getProgressServer(regionId)
   const completedLevels = progress?.completedLevels ?? []
   const currentLevel = progress?.currentLevel ?? 1
@@ -31,75 +30,106 @@ export default async function MissionPage({ params }: { params: Promise<{ region
   const completionPct = Math.round((completedLevels.length / baseLevels.length) * 100)
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-8">
-      <div className="text-center max-w-4xl w-full">
-        <h1 className="text-3xl font-bold tracking-widest mb-1">{regionName.toUpperCase()} ADVENTURE</h1>
+    <main className="min-h-screen p-6 relative overflow-hidden">
+      <div className="absolute bottom-[-60px] left-[-60px] w-72 h-72 rounded-full bg-teal-900/15 blur-3xl pointer-events-none" />
 
-        {/* Progress bar region */}
-        <div className="flex items-center gap-3 justify-center mb-6 text-xs text-gray-400">
-          <span>COMPLETION</span>
-          <div className="w-48 bg-gray-700 h-1.5 rounded">
-            <div
-              className="h-1.5 rounded bg-green-500 transition-all"
-              style={{ width: `${completionPct}%` }}
-            />
+      <div className="max-w-4xl mx-auto relative z-10">
+
+        {/* Header */}
+        <div className="mb-6">
+          <Link href="/region" className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)] hover:text-[var(--accent-green)] transition-colors mb-4">
+            ← Kembali ke Region
+          </Link>
+
+          <div className={`eco-card bg-gradient-to-r ${meta.color} p-5 mb-5`}>
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                <span className="text-4xl">{meta.emoji}</span>
+                <div>
+                  <h1 className="text-xl font-bold text-white">{meta.name}</h1>
+                  <p className="text-xs text-[var(--text-muted)]">Pilih level misi untuk dimulai</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 text-sm">
+                {progress && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-lg">⭐</span>
+                    <div>
+                      <p className="text-xs text-[var(--text-muted)]">Research Points</p>
+                      <p className="font-bold text-[var(--accent-amber)]">{progress.researchPoints} pts</p>
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs text-[var(--text-muted)]">Progres</p>
+                  <p className="font-bold text-[var(--accent-teal)]">{completedLevels.length}/{baseLevels.length} misi</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <div className="mt-4">
+              <div className="flex justify-between text-xs mb-1.5">
+                <span className="text-[var(--text-muted)]">Completion</span>
+                <span className="text-[var(--accent-green)]">{completionPct}%</span>
+              </div>
+              <div className="progress-bar-bg h-2">
+                <div className="progress-bar-fill h-2" style={{ width: `${completionPct}%` }} />
+              </div>
+            </div>
           </div>
-          <span className="text-green-400">{completionPct}%</span>
-          {progress && (
-            <span className="text-yellow-400 ml-2">⭐ {progress.researchPoints} pts</span>
-          )}
         </div>
 
-        <h2 className="text-sm tracking-widest mb-6 text-gray-300">SELECT MISSION LEVEL</h2>
-
-        <div className="grid grid-cols-5 gap-4">
+        {/* Mission grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           {levels.map((level) => (
-            <div key={level.id} className="flex flex-col items-center gap-1">
-              <span className="text-sm text-gray-400">{level.id}</span>
-
+            <div key={level.id}>
               {level.unlocked ? (
-                <Link href={`/briefing/${regionId}/${level.id}`} className="w-full">
-                  <div className={`border rounded overflow-hidden transition-colors cursor-pointer
-                    ${level.completed
-                      ? 'bg-green-900/20 border-green-700 hover:border-green-400'
-                      : 'bg-[var(--bg-card)] border-green-500 hover:border-green-300'
-                    }`}>
-                    <div className="h-20 flex items-center justify-center text-xs p-2 text-center text-green-400">
+                <Link href={`/briefing/${regionId}/${level.id}`}>
+                  <div className={`eco-card p-3 cursor-pointer h-full flex flex-col items-center text-center
+                    ${level.completed ? 'border-green-700/60' : 'border-[var(--border-glow)]/40'}`}>
+
+                    {/* Level number */}
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold mb-2
+                      ${level.completed
+                        ? 'bg-green-700/30 text-[var(--accent-green)]'
+                        : 'bg-teal-800/30 text-[var(--accent-teal)]'}`}>
+                      {level.completed ? '✓' : level.id}
+                    </div>
+
+                    <p className="text-[11px] text-[var(--text-secondary)] leading-tight flex-1 mb-2">
                       {level.title}
-                    </div>
-                    <div className={`text-xs py-1 tracking-widest ${level.completed ? 'text-green-600' : 'text-green-400'}`}>
-                      {level.completed ? '✓ DONE' : 'UNLOCKED'}
-                    </div>
+                    </p>
+
+                    <span className={`badge text-[9px] ${level.completed ? 'badge-green' : 'badge-teal'}`}>
+                      {level.completed ? 'SELESAI' : 'MAIN'}
+                    </span>
                   </div>
                 </Link>
               ) : (
-                <div className="w-full opacity-50">
-                  <div className="bg-[var(--bg-card)] border border-[var(--border-card)] rounded overflow-hidden">
-                    <div className="h-20 bg-gray-800 flex items-center justify-center text-xs text-gray-500 p-2 text-center">
-                      {level.title === 'Coming Soon' ? 'COMING SOON' : level.title}
-                    </div>
-                    <div className="text-xs py-1 text-gray-500 tracking-widest flex items-center justify-center gap-1">
-                      🔒 LOCKED
-                    </div>
+                <div className="eco-card p-3 opacity-40 flex flex-col items-center text-center">
+                  <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-gray-500 text-sm mb-2">
+                    🔒
                   </div>
+                  <p className="text-[11px] text-gray-500 leading-tight flex-1 mb-2">
+                    {level.title === 'Coming Soon' ? '???' : level.title}
+                  </p>
+                  <span className="badge badge-gray text-[9px]">TERKUNCI</span>
                 </div>
               )}
             </div>
           ))}
         </div>
 
+        {/* Guest hint */}
         {!progress && (
-          <p className="mt-6 text-xs text-yellow-500">
-            <Link href="/login" className="underline hover:text-yellow-300">Sign in</Link> untuk menyimpan progress dan unlock level berikutnya.
-          </p>
+          <div className="mt-5 eco-card p-4 flex items-center gap-3 border-[var(--accent-amber)]/30">
+            <span className="text-xl">💡</span>
+            <p className="text-xs text-[var(--text-muted)]">
+              <Link href="/login" className="text-[var(--accent-amber)] hover:underline font-medium">Masuk</Link> untuk menyimpan progress dan membuka level berikutnya secara otomatis.
+            </p>
+          </div>
         )}
-
-        <div className="flex justify-between mt-8 text-xs text-gray-400">
-          <Link href="/region" className="flex items-center gap-2 hover:text-white transition-colors">
-            <span className="text-red-400">←</span> [ESC] BACK
-          </Link>
-          <span className="text-green-400">[ENTER] START LEVEL</span>
-        </div>
       </div>
     </main>
   )
