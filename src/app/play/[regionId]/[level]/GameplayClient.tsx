@@ -40,32 +40,33 @@ export default function GameplayClient({ mission, regionId, level }: { mission: 
   const [newAchievements, setNewAchievements] = useState<Achievement[]>([])
   const [totalMissionsCompleted, setTotalMissionsCompleted] = useState(0)
 
+  function lockOrientation(orientation: 'landscape' | 'portrait') {
+    // Native Android bridge (most reliable)
+    try {
+      const w = window as unknown as { AndroidOrientation?: { lock: (o: string) => void } }
+      if (w.AndroidOrientation) {
+        w.AndroidOrientation.lock(orientation)
+        return
+      }
+    } catch { /* ignore */ }
+    // Web fallback
+    try {
+      if (screen.orientation && 'lock' in screen.orientation) {
+        (screen.orientation as ScreenOrientation & { lock: (o: string) => Promise<void> }).lock(orientation)
+      }
+    } catch { /* ignore */ }
+  }
+
   // Lock to landscape on mount, restore on unmount
   useEffect(() => {
     const el = document.documentElement
     el.style.setProperty('--gameplay-active', '1')
 
-    const lockLandscape = async () => {
-      try {
-        if (screen.orientation && 'lock' in screen.orientation) {
-          await (screen.orientation as ScreenOrientation & { lock: (o: string) => Promise<void> }).lock('landscape')
-        }
-      } catch {
-        // Not supported on all devices — fallback via CSS
-      }
-    }
-    lockLandscape()
+    lockOrientation('landscape')
 
     return () => {
       el.style.removeProperty('--gameplay-active')
-      const restorePortrait = async () => {
-        try {
-          if (screen.orientation && 'lock' in screen.orientation) {
-            await (screen.orientation as ScreenOrientation & { lock: (o: string) => Promise<void> }).lock('portrait')
-          }
-        } catch { /* ignore */ }
-      }
-      restorePortrait()
+      lockOrientation('portrait')
     }
   }, [])
 
