@@ -26,7 +26,9 @@ export default function AuthButton() {
   if (user) {
     return (
       <div className="flex items-center gap-3 text-sm">
-        <span className="text-green-400">{user.email?.split('@')[0].toUpperCase()}</span>
+        <Link href="/profile" className="text-green-400 hover:text-green-300 transition-colors">
+          {user.email?.split('@')[0].toUpperCase()}
+        </Link>
         <button onClick={handleSignOut} className="text-gray-400 hover:text-red-400 text-xs transition-colors">
           [SIGN OUT]
         </button>

@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import Link from 'next/link'
-import { Mission, EnvironmentStatus, EventLog, GameAction } from '@/types'
+import { Mission, EnvironmentStatus, EventLog, GameAction, Achievement } from '@/types'
 import { saveProgress, saveMissionResult } from '@/lib/supabase/progress'
+import { checkAndUnlockAchievements } from '@/lib/supabase/achievements'
+import AchievementToast from '@/components/game/AchievementToast'
 
 const ACTIONS: { key: string; label: string; action: GameAction }[] = [
   { key: '1', label: 'CLEAN WASTE', action: 'clean_waste' },
@@ -49,11 +51,23 @@ export default function GameplayClient({
   const [progress, setProgress] = useState(12)
   const [missionComplete, setMissionComplete] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [newAchievements, setNewAchievements] = useState<Achievement[]>([])
+  const [totalMissionsCompleted, setTotalMissionsCompleted] = useState(0)
+
+  useEffect(() => {
+    if (newAchievements.length === 0) return
+    const t = setTimeout(() => setNewAchievements([]), 4000)
+    return () => clearTimeout(t)
+  }, [newAchievements])
 
   const checkMissionComplete = useCallback(async (s: EnvironmentStatus, prog: number) => {
     if (prog >= 100 && !missionComplete) {
       setMissionComplete(true)
       setSaving(true)
+
+      const newTotal = totalMissionsCompleted + 1
+      setTotalMissionsCompleted(newTotal)
+
       await saveMissionResult(regionId, level, {
         pollutionFinal: s.pollution,
         biodiversityFinal: s.biodiversity,
@@ -65,9 +79,18 @@ export default function GameplayClient({
         completedLevels: [level],
         researchPoints: 250,
       })
+
+      const unlocked = await checkAndUnlockAchievements({
+        treesPlanted: s.trees,
+        pollutionLevel: s.pollution,
+        missionsCompleted: newTotal,
+        researchPoints: 250,
+      })
+      if (unlocked.length > 0) setNewAchievements(unlocked)
+
       setSaving(false)
     }
-  }, [missionComplete, regionId, level])
+  }, [missionComplete, regionId, level, totalMissionsCompleted])
 
   function handleAction(action: GameAction) {
     const newLog: EventLog = { id: Date.now().toString(), type: 'info', message: '', timestamp: new Date() }
@@ -123,6 +146,7 @@ export default function GameplayClient({
 
   return (
     <div className="min-h-screen flex flex-col bg-black text-green-400 font-mono text-xs relative">
+      <AchievementToast achievements={newAchievements} />
       {missionComplete && (
         <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-50">
           <div className="border border-green-500 bg-black p-8 text-center max-w-sm">

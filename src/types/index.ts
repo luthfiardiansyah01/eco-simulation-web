@@ -54,3 +54,17 @@ export type UserProgress = {
   researchPoints: number
   unlockedItems: string[]
 }
+
+export type Achievement = {
+  id: string
+  title: string
+  description: string
+  icon: string
+  conditionType: string
+  conditionValue: number
+}
+
+export type UserAchievement = {
+  achievementId: string
+  unlockedAt: string
+}
