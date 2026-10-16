@@ -58,11 +58,14 @@ export default function GameplayClient({ mission, regionId, level }: { mission: 
 
     return () => {
       el.style.removeProperty('--gameplay-active')
-      try {
-        if (screen.orientation && 'unlock' in screen.orientation) {
-          (screen.orientation as ScreenOrientation & { unlock: () => void }).unlock()
-        }
-      } catch { /* ignore */ }
+      const restorePortrait = async () => {
+        try {
+          if (screen.orientation && 'lock' in screen.orientation) {
+            await (screen.orientation as ScreenOrientation & { lock: (o: string) => Promise<void> }).lock('portrait')
+          }
+        } catch { /* ignore */ }
+      }
+      restorePortrait()
     }
   }, [])
 
