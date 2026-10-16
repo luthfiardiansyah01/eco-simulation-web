@@ -81,7 +81,14 @@ export default function GameplayClient({ mission, regionId, level }: { mission: 
   const objChecks = buildObjectiveChecks(mission.objectives)
   const objResults = objChecks.map((o) => ({ ...o, done: o.check(status), progress: o.progress(status) }))
   const completedObjs = objResults.filter((o) => o.done).length
-  const progress = Math.round((completedObjs / objChecks.length) * 100)
+  // Progress = weighted: each completed obj = 100/n%, partial from env stats fill the rest
+  const baseProgress = Math.round((completedObjs / objChecks.length) * 100)
+  // Bonus partial progress from individual stats (max 30% total bonus before objectives complete)
+  const pollBonus   = Math.round(((100 - status.pollution) / 100) * 10)
+  const treeBonus   = Math.round((status.trees / 50) * 10)
+  const fishBonus   = Math.round((status.fishPopulation / 60) * 10)
+  const partialBonus = Math.min(30, pollBonus + treeBonus + fishBonus)
+  const progress = completedObjs === objChecks.length ? 100 : Math.min(99, baseProgress + partialBonus)
 
   function lockOrientation(orientation: 'landscape' | 'portrait') {
     // Native Android bridge (most reliable)
@@ -153,8 +160,12 @@ export default function GameplayClient({ mission, regionId, level }: { mission: 
       else if (action === 'plant_tree')   { next.trees++; next.biodiversity = Math.min(100, prev.biodiversity + 2); next.credits -= 30; newLog.message = `Pohon ditanam (${next.trees}/50)`; newLog.type = 'success' }
       else if (action === 'scan_water')   { next.energy -= 10; newLog.message = `Kualitas air: ${prev.waterQuality}%` }
       else if (action === 'deploy_drone') { next.drones++; next.energy -= 30; newLog.message = 'Drone diterbangkan' }
-      else if (action === 'build_filter') { next.waterQuality = Math.min(100, prev.waterQuality + 8); next.credits -= 150; newLog.message = 'Filter air terpasang'; newLog.type = 'success' }
+      else if (action === 'build_filter') { next.waterQuality = Math.min(100, prev.waterQuality + 8); next.fishPopulation = Math.min(100, prev.fishPopulation + 5); next.credits -= 150; newLog.message = 'Filter terpasang — ikan mulai kembali'; newLog.type = 'success' }
       else { newLog.message = `Aksi: ${label}` }
+      // Passive: fish recover as pollution drops
+      if (next.pollution < prev.pollution) {
+        next.fishPopulation = Math.min(100, next.fishPopulation + 3)
+      }
       return next
     })
     setLogs((prev) => [newLog, ...prev.slice(0, 9)])
