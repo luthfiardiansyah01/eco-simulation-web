@@ -12,23 +12,24 @@ interface Props {
 
 export default function IsometricMap({ pollution, biodiversity, waterQuality, trees, onTileClick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const gameRef = useRef<unknown>(null)
+  const gameRef = useRef<{ destroy: (arg: boolean) => void } | null>(null)
 
   useEffect(() => {
     if (!containerRef.current) return
-    let game: { destroy: (arg: boolean) => void } | null = null
+    let destroyed = false
 
     const initPhaser = async () => {
       const Phaser = (await import('phaser')).default
-      if (!containerRef.current) return
+      if (!containerRef.current || destroyed) return
 
-      const W = containerRef.current.offsetWidth || 400
-      const H = containerRef.current.offsetHeight || 300
+      const W = containerRef.current.offsetWidth || 360
+      const H = containerRef.current.offsetHeight || 260
 
-      const TILE_W = 64
-      const TILE_H = 32
+      // Tile size adapts to screen width: smaller on mobile
+      const TILE_W = W < 380 ? 40 : W < 500 ? 52 : 64
+      const TILE_H = TILE_W / 2
+      const SIDE_H = Math.round(TILE_H * 0.4)
 
-      // Tile types: 0=water, 1=grass, 2=dirt, 3=tree, 4=polluted
       const MAP = [
         [0, 0, 0, 1, 1, 1, 2, 2],
         [0, 0, 1, 1, 3, 1, 1, 2],
@@ -43,51 +44,55 @@ export default function IsometricMap({ pollution, biodiversity, waterQuality, tr
       const ROWS = MAP.length
       const COLS = MAP[0].length
 
+      // Dynamic water color based on quality
+      const wq = waterQuality / 100
+      const waterR = Math.round(0x5a * (1 - wq) + 0x1e * wq)
+      const waterG = Math.round(0x1e * (1 - wq) + 0x6b * wq)
+      const waterB = Math.round(0x1e * (1 - wq) + 0x8c * wq)
+      const dynamicWater = (waterR << 16) | (waterG << 8) | waterB
+
+      // Dynamic polluted color
+      const pl = pollution / 100
+      const pollR = Math.round(0x2d * (1 - pl) + 0x5a * pl)
+      const pollG = Math.round(0x7a * (1 - pl) + 0x4a * pl)
+      const pollB = Math.round(0x3a * (1 - pl) + 0x1a * pl)
+      const dynamicPoll = (pollR << 16) | (pollG << 8) | pollB
+
+      const tileColors: Record<number, number> = {
+        0: dynamicWater,
+        1: 0x2d7a3a,
+        2: 0x8b6914,
+        3: 0x1a5c28,
+        4: dynamicPoll,
+      }
+
+      // Center map within canvas
+      const mapPixelW = (ROWS + COLS) * (TILE_W / 2)
+      const mapPixelH = (ROWS + COLS) * (TILE_H / 2)
+      const offsetX = W / 2
+      const offsetY = Math.max(20, (H - mapPixelH) / 2)
+
       class IsoScene extends Phaser.Scene {
-        preload() {
-          // Generate tile textures via graphics
-        }
-
         create() {
-          const offsetX = W / 2
-          const offsetY = 60
-
-          // Water color shifts from murky to blue based on quality
-          const wq = waterQuality / 100
-          const waterR = Math.round(0x5a * (1 - wq) + 0x1e * wq)
-          const waterG = Math.round(0x1e * (1 - wq) + 0x6b * wq)
-          const waterB = Math.round(0x1e * (1 - wq) + 0x8c * wq)
-          const dynamicWater = (waterR << 16) | (waterG << 8) | waterB
-
-          // Polluted tiles shift from green to brown based on pollution
-          const pl = pollution / 100
-          const pollR = Math.round(0x2d * (1 - pl) + 0x5a * pl)
-          const pollG = Math.round(0x7a * (1 - pl) + 0x4a * pl)
-          const pollB = Math.round(0x3a * (1 - pl) + 0x1a * pl)
-          const dynamicPoll = (pollR << 16) | (pollG << 8) | pollB
-
-          const tileColors: Record<number, number> = {
-            0: dynamicWater,
-            1: 0x2d7a3a,
-            2: 0x8b6914,
-            3: 0x1a5c28,
-            4: dynamicPoll,
-          }
-
           for (let row = 0; row < ROWS; row++) {
             for (let col = 0; col < COLS; col++) {
               const tileType = MAP[row][col]
-
               const isoX = offsetX + (col - row) * (TILE_W / 2)
               const isoY = offsetY + (col + row) * (TILE_H / 2)
 
-              const gfx = this.add.graphics()
-              const topColor = tileColors[tileType]
-              // Extra trees based on trees count
               let drawType = tileType
               if (tileType === 1 && trees > 30 && (row + col) % 3 === 0) drawType = 3
 
-              // Draw isometric tile top face
+              const topColor = tileColors[tileType]
+              const tcR = (topColor >> 16) & 0xff
+              const tcG = (topColor >> 8) & 0xff
+              const tcB = topColor & 0xff
+              const leftFace = ((Math.max(0, tcR - 40)) << 16) | ((Math.max(0, tcG - 40)) << 8) | Math.max(0, tcB - 40)
+              const rightFace = ((Math.max(0, tcR - 20)) << 16) | ((Math.max(0, tcG - 20)) << 8) | Math.max(0, tcB - 20)
+
+              const gfx = this.add.graphics()
+
+              // Top face
               gfx.fillStyle(topColor, 1)
               gfx.beginPath()
               gfx.moveTo(isoX, isoY)
@@ -97,52 +102,45 @@ export default function IsometricMap({ pollution, biodiversity, waterQuality, tr
               gfx.closePath()
               gfx.fillPath()
 
-              // Extract RGB from topColor for darker side faces
-              const tcR = (topColor >> 16) & 0xff
-              const tcG = (topColor >> 8) & 0xff
-              const tcB = topColor & 0xff
-              const leftFaceColor = ((Math.max(0, tcR - 40)) << 16) | ((Math.max(0, tcG - 40)) << 8) | Math.max(0, tcB - 40)
-              const rightFaceColor = ((Math.max(0, tcR - 20)) << 16) | ((Math.max(0, tcG - 20)) << 8) | Math.max(0, tcB - 20)
-
-              // Left face (darker)
-              gfx.fillStyle(leftFaceColor, 1)
+              // Left face
+              gfx.fillStyle(leftFace, 1)
               gfx.beginPath()
               gfx.moveTo(isoX - TILE_W / 2, isoY + TILE_H / 2)
               gfx.lineTo(isoX, isoY + TILE_H)
-              gfx.lineTo(isoX, isoY + TILE_H + 12)
-              gfx.lineTo(isoX - TILE_W / 2, isoY + TILE_H / 2 + 12)
+              gfx.lineTo(isoX, isoY + TILE_H + SIDE_H)
+              gfx.lineTo(isoX - TILE_W / 2, isoY + TILE_H / 2 + SIDE_H)
               gfx.closePath()
               gfx.fillPath()
 
-              // Right face (slightly darker)
-              gfx.fillStyle(rightFaceColor, 1)
+              // Right face
+              gfx.fillStyle(rightFace, 1)
               gfx.beginPath()
               gfx.moveTo(isoX, isoY + TILE_H)
               gfx.lineTo(isoX + TILE_W / 2, isoY + TILE_H / 2)
-              gfx.lineTo(isoX + TILE_W / 2, isoY + TILE_H / 2 + 12)
-              gfx.lineTo(isoX, isoY + TILE_H + 12)
+              gfx.lineTo(isoX + TILE_W / 2, isoY + TILE_H / 2 + SIDE_H)
+              gfx.lineTo(isoX, isoY + TILE_H + SIDE_H)
               gfx.closePath()
               gfx.fillPath()
 
-              // Draw tree on tree tiles
+              // Tree
               if (drawType === 3) {
-                const treeGfx = this.add.graphics()
-                // trunk
-                treeGfx.fillStyle(0x5a3a1a, 1)
-                treeGfx.fillRect(isoX - 3, isoY - 18, 6, 14)
-                // canopy
-                treeGfx.fillStyle(0x1a7a2a, 0.9)
-                treeGfx.fillCircle(isoX, isoY - 22, 12)
-                treeGfx.fillStyle(0x22a83a, 0.7)
-                treeGfx.fillCircle(isoX, isoY - 26, 8)
+                const tg = this.add.graphics()
+                const trunkW = Math.max(3, TILE_W * 0.06)
+                const trunkH = TILE_H * 0.5
+                const canopyR = TILE_W * 0.2
+                tg.fillStyle(0x5a3a1a, 1)
+                tg.fillRect(isoX - trunkW / 2, isoY - trunkH, trunkW, trunkH)
+                tg.fillStyle(0x1a7a2a, 0.9)
+                tg.fillCircle(isoX, isoY - trunkH - canopyR * 0.5, canopyR)
+                tg.fillStyle(0x22a83a, 0.7)
+                tg.fillCircle(isoX, isoY - trunkH - canopyR, canopyR * 0.65)
               }
 
-              // Water ripple effect
+              // Water ripple
               if (tileType === 0) {
                 const ripple = this.add.graphics()
                 ripple.lineStyle(1, 0x4dd4f0, 0.3)
-                ripple.strokeEllipse(isoX, isoY + TILE_H / 2, TILE_W * 0.6, TILE_H * 0.4)
-
+                ripple.strokeEllipse(isoX, isoY + TILE_H / 2, TILE_W * 0.55, TILE_H * 0.35)
                 this.tweens.add({
                   targets: ripple,
                   alpha: { from: 0.3, to: 0 },
@@ -154,7 +152,7 @@ export default function IsometricMap({ pollution, biodiversity, waterQuality, tr
                 })
               }
 
-              // Make tile interactive
+              // Touch-friendly interactive zone
               const zone = this.add.zone(isoX, isoY + TILE_H / 2, TILE_W, TILE_H)
               zone.setInteractive()
               zone.on('pointerdown', () => {
@@ -164,26 +162,26 @@ export default function IsometricMap({ pollution, biodiversity, waterQuality, tr
             }
           }
 
-          // Pollution haze overlay
+          // Pollution haze
           if (pollution > 50) {
             const haze = this.add.graphics()
-            haze.fillStyle(0x5a4a00, 0.15 * (pollution / 100))
+            haze.fillStyle(0x5a4a00, 0.12 * (pollution / 100))
             haze.fillRect(0, 0, W, H)
           }
 
-          // Biodiversity particles (butterflies/birds)
+          // Biodiversity particles
           if (biodiversity > 40) {
-            for (let i = 0; i < Math.floor(biodiversity / 20); i++) {
-              const particle = this.add.graphics()
-              particle.fillStyle(0x4ade80, 0.8)
-              particle.fillCircle(0, 0, 3)
-              particle.x = Phaser.Math.Between(50, W - 50)
-              particle.y = Phaser.Math.Between(50, H - 50)
-
+            const count = Math.min(5, Math.floor(biodiversity / 20))
+            for (let i = 0; i < count; i++) {
+              const p = this.add.graphics()
+              p.fillStyle(0x4ade80, 0.8)
+              p.fillCircle(0, 0, Math.max(2, TILE_W * 0.05))
+              p.x = Phaser.Math.Between(30, W - 30)
+              p.y = Phaser.Math.Between(30, H - 60)
               this.tweens.add({
-                targets: particle,
-                x: particle.x + Phaser.Math.Between(-60, 60),
-                y: particle.y + Phaser.Math.Between(-40, 40),
+                targets: p,
+                x: p.x + Phaser.Math.Between(-50, 50),
+                y: p.y + Phaser.Math.Between(-30, 30),
                 duration: 2000 + Math.random() * 2000,
                 repeat: -1,
                 yoyo: true,
@@ -193,20 +191,23 @@ export default function IsometricMap({ pollution, biodiversity, waterQuality, tr
             }
           }
 
-          // Legend
-          const legendY = H - 30
+          // Legend — responsive spacing
+          const legendY = H - 22
+          const itemW = Math.floor(W / 4)
           const legendItems = [
-            { color: 0x1e6b8c, label: 'Sungai' },
-            { color: 0x2d7a3a, label: 'Tanah' },
-            { color: 0x1a5c28, label: 'Pohon' },
-            { color: 0x5a4a1a, label: 'Polutan' },
+            { color: dynamicWater, label: 'Sungai' },
+            { color: 0x2d7a3a,     label: 'Tanah'  },
+            { color: 0x1a5c28,     label: 'Pohon'  },
+            { color: dynamicPoll,  label: 'Cemar'  },
           ]
+          const fontSize = W < 380 ? '8px' : '9px'
           legendItems.forEach((item, i) => {
+            const lx = i * itemW + 8
             const lg = this.add.graphics()
             lg.fillStyle(item.color, 1)
-            lg.fillRect(10 + i * 80, legendY, 10, 10)
-            this.add.text(24 + i * 80, legendY, item.label, {
-              fontSize: '9px',
+            lg.fillRect(lx, legendY, 8, 8)
+            this.add.text(lx + 11, legendY, item.label, {
+              fontSize,
               color: '#86efac',
               fontFamily: 'Arial',
             })
@@ -214,24 +215,52 @@ export default function IsometricMap({ pollution, biodiversity, waterQuality, tr
         }
       }
 
-      const config: object = {
-        type: Phaser.AUTO,
+      const config = {
+        type: Phaser.CANVAS,
         width: W,
         height: H,
         backgroundColor: '#0a1a14',
         parent: containerRef.current,
         scene: IsoScene,
-        antialias: true,
+        antialias: false,
+        // Scale to fill container on any screen
+        scale: {
+          mode: Phaser.Scale.FIT,
+          autoCenter: Phaser.Scale.CENTER_BOTH,
+          width: W,
+          height: H,
+        },
       }
 
-      game = new Phaser.Game(config as ConstructorParameters<typeof Phaser.Game>[0])
+      if (destroyed) return
+      const game = new Phaser.Game(config as ConstructorParameters<typeof Phaser.Game>[0])
       gameRef.current = game
     }
 
     initPhaser()
 
+    // Resize observer — rebuild game if container size changes significantly
+    let resizeTimer: ReturnType<typeof setTimeout>
+    const observer = new ResizeObserver(() => {
+      clearTimeout(resizeTimer)
+      resizeTimer = setTimeout(() => {
+        if (gameRef.current) {
+          gameRef.current.destroy(true)
+          gameRef.current = null
+        }
+        if (!destroyed) initPhaser()
+      }, 300)
+    })
+    if (containerRef.current) observer.observe(containerRef.current)
+
     return () => {
-      if (game) game.destroy(true)
+      destroyed = true
+      clearTimeout(resizeTimer)
+      observer.disconnect()
+      if (gameRef.current) {
+        gameRef.current.destroy(true)
+        gameRef.current = null
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pollution, biodiversity, waterQuality, trees])
@@ -240,7 +269,7 @@ export default function IsometricMap({ pollution, biodiversity, waterQuality, tr
     <div
       ref={containerRef}
       className="w-full h-full"
-      style={{ minHeight: '200px' }}
+      style={{ minHeight: '200px', touchAction: 'none' }}
     />
   )
 }
