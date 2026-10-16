@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 
 interface Props {
   pollution: number
@@ -10,266 +10,312 @@ interface Props {
   onTileClick?: (type: string) => void
 }
 
+const MAP = [
+  [0, 0, 0, 1, 1, 1, 2, 2],
+  [0, 0, 1, 1, 3, 1, 1, 2],
+  [0, 1, 1, 3, 1, 1, 2, 2],
+  [1, 1, 3, 1, 1, 2, 4, 4],
+  [1, 3, 1, 1, 2, 4, 4, 4],
+  [1, 1, 1, 2, 4, 4, 2, 1],
+  [2, 2, 4, 4, 4, 2, 1, 1],
+  [2, 4, 4, 4, 2, 1, 1, 0],
+]
+
+const TILE_TYPES = ['water', 'grass', 'dirt', 'tree', 'polluted']
+
+function hexToRgb(hex: number) {
+  return { r: (hex >> 16) & 0xff, g: (hex >> 8) & 0xff, b: hex & 0xff }
+}
+
+function lerp(a: number, b: number, t: number) {
+  return Math.round(a * (1 - t) + b * t)
+}
+
 export default function IsometricMap({ pollution, biodiversity, waterQuality, trees, onTileClick }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const gameRef = useRef<{ destroy: (arg: boolean) => void } | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const animRef = useRef<number>(0)
+  const rippleRef = useRef<number>(0)
+  const particlesRef = useRef<{ x: number; y: number; vx: number; vy: number; phase: number }[]>([])
 
-  useEffect(() => {
-    if (!containerRef.current) return
-    let destroyed = false
+  const draw = useCallback((canvas: HTMLCanvasElement) => {
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
 
-    const initPhaser = async () => {
-      const Phaser = (await import('phaser')).default
-      if (!containerRef.current || destroyed) return
+    const W = canvas.width
+    const H = canvas.height
 
-      const W = containerRef.current.offsetWidth || 360
-      const H = containerRef.current.offsetHeight || 260
+    // Tile size adapts to width
+    const TILE_W = W < 360 ? 36 : W < 480 ? 46 : 58
+    const TILE_H = TILE_W / 2
+    const SIDE = Math.round(TILE_H * 0.45)
 
-      // Tile size adapts to screen width: smaller on mobile
-      const TILE_W = W < 380 ? 40 : W < 500 ? 52 : 64
-      const TILE_H = TILE_W / 2
-      const SIDE_H = Math.round(TILE_H * 0.4)
+    const ROWS = MAP.length
+    const COLS = MAP[0].length
 
-      const MAP = [
-        [0, 0, 0, 1, 1, 1, 2, 2],
-        [0, 0, 1, 1, 3, 1, 1, 2],
-        [0, 1, 1, 3, 1, 1, 2, 2],
-        [1, 1, 3, 1, 1, 2, 4, 4],
-        [1, 3, 1, 1, 2, 4, 4, 4],
-        [1, 1, 1, 2, 4, 4, 2, 1],
-        [2, 2, 4, 4, 4, 2, 1, 1],
-        [2, 4, 4, 4, 2, 1, 1, 0],
-      ]
+    const mapH = (ROWS + COLS) * (TILE_H / 2)
+    const offsetX = W / 2
+    const offsetY = Math.max(16, (H - mapH - SIDE) / 2)
 
-      const ROWS = MAP.length
-      const COLS = MAP[0].length
+    // Dynamic colors
+    const wq = waterQuality / 100
+    const waterColor = `rgb(${lerp(0x5a, 0x1e, wq)},${lerp(0x1e, 0x6b, wq)},${lerp(0x1e, 0x9c, wq)})`
+    const waterDark  = `rgb(${lerp(0x3a, 0x0e, wq)},${lerp(0x0e, 0x4b, wq)},${lerp(0x0e, 0x7c, wq)})`
 
-      // Dynamic water color based on quality
-      const wq = waterQuality / 100
-      const waterR = Math.round(0x5a * (1 - wq) + 0x1e * wq)
-      const waterG = Math.round(0x1e * (1 - wq) + 0x6b * wq)
-      const waterB = Math.round(0x1e * (1 - wq) + 0x8c * wq)
-      const dynamicWater = (waterR << 16) | (waterG << 8) | waterB
+    const pl = pollution / 100
+    const pollColor = `rgb(${lerp(0x2d, 0x5a, pl)},${lerp(0x7a, 0x3a, pl)},${lerp(0x3a, 0x0a, pl)})`
+    const pollDark  = `rgb(${lerp(0x1d, 0x4a, pl)},${lerp(0x5a, 0x2a, pl)},${lerp(0x2a, 0x00, pl)})`
 
-      // Dynamic polluted color
-      const pl = pollution / 100
-      const pollR = Math.round(0x2d * (1 - pl) + 0x5a * pl)
-      const pollG = Math.round(0x7a * (1 - pl) + 0x4a * pl)
-      const pollB = Math.round(0x3a * (1 - pl) + 0x1a * pl)
-      const dynamicPoll = (pollR << 16) | (pollG << 8) | pollB
-
-      const tileColors: Record<number, number> = {
-        0: dynamicWater,
-        1: 0x2d7a3a,
-        2: 0x8b6914,
-        3: 0x1a5c28,
-        4: dynamicPoll,
-      }
-
-      // Center map within canvas
-      const mapPixelW = (ROWS + COLS) * (TILE_W / 2)
-      const mapPixelH = (ROWS + COLS) * (TILE_H / 2)
-      const offsetX = W / 2
-      const offsetY = Math.max(20, (H - mapPixelH) / 2)
-
-      class IsoScene extends Phaser.Scene {
-        create() {
-          for (let row = 0; row < ROWS; row++) {
-            for (let col = 0; col < COLS; col++) {
-              const tileType = MAP[row][col]
-              const isoX = offsetX + (col - row) * (TILE_W / 2)
-              const isoY = offsetY + (col + row) * (TILE_H / 2)
-
-              let drawType = tileType
-              if (tileType === 1 && trees > 30 && (row + col) % 3 === 0) drawType = 3
-
-              const topColor = tileColors[tileType]
-              const tcR = (topColor >> 16) & 0xff
-              const tcG = (topColor >> 8) & 0xff
-              const tcB = topColor & 0xff
-              const leftFace = ((Math.max(0, tcR - 40)) << 16) | ((Math.max(0, tcG - 40)) << 8) | Math.max(0, tcB - 40)
-              const rightFace = ((Math.max(0, tcR - 20)) << 16) | ((Math.max(0, tcG - 20)) << 8) | Math.max(0, tcB - 20)
-
-              const gfx = this.add.graphics()
-
-              // Top face
-              gfx.fillStyle(topColor, 1)
-              gfx.beginPath()
-              gfx.moveTo(isoX, isoY)
-              gfx.lineTo(isoX + TILE_W / 2, isoY + TILE_H / 2)
-              gfx.lineTo(isoX, isoY + TILE_H)
-              gfx.lineTo(isoX - TILE_W / 2, isoY + TILE_H / 2)
-              gfx.closePath()
-              gfx.fillPath()
-
-              // Left face
-              gfx.fillStyle(leftFace, 1)
-              gfx.beginPath()
-              gfx.moveTo(isoX - TILE_W / 2, isoY + TILE_H / 2)
-              gfx.lineTo(isoX, isoY + TILE_H)
-              gfx.lineTo(isoX, isoY + TILE_H + SIDE_H)
-              gfx.lineTo(isoX - TILE_W / 2, isoY + TILE_H / 2 + SIDE_H)
-              gfx.closePath()
-              gfx.fillPath()
-
-              // Right face
-              gfx.fillStyle(rightFace, 1)
-              gfx.beginPath()
-              gfx.moveTo(isoX, isoY + TILE_H)
-              gfx.lineTo(isoX + TILE_W / 2, isoY + TILE_H / 2)
-              gfx.lineTo(isoX + TILE_W / 2, isoY + TILE_H / 2 + SIDE_H)
-              gfx.lineTo(isoX, isoY + TILE_H + SIDE_H)
-              gfx.closePath()
-              gfx.fillPath()
-
-              // Tree
-              if (drawType === 3) {
-                const tg = this.add.graphics()
-                const trunkW = Math.max(3, TILE_W * 0.06)
-                const trunkH = TILE_H * 0.5
-                const canopyR = TILE_W * 0.2
-                tg.fillStyle(0x5a3a1a, 1)
-                tg.fillRect(isoX - trunkW / 2, isoY - trunkH, trunkW, trunkH)
-                tg.fillStyle(0x1a7a2a, 0.9)
-                tg.fillCircle(isoX, isoY - trunkH - canopyR * 0.5, canopyR)
-                tg.fillStyle(0x22a83a, 0.7)
-                tg.fillCircle(isoX, isoY - trunkH - canopyR, canopyR * 0.65)
-              }
-
-              // Water ripple
-              if (tileType === 0) {
-                const ripple = this.add.graphics()
-                ripple.lineStyle(1, 0x4dd4f0, 0.3)
-                ripple.strokeEllipse(isoX, isoY + TILE_H / 2, TILE_W * 0.55, TILE_H * 0.35)
-                this.tweens.add({
-                  targets: ripple,
-                  alpha: { from: 0.3, to: 0 },
-                  scaleX: { from: 1, to: 1.3 },
-                  scaleY: { from: 1, to: 1.3 },
-                  duration: 2000 + Math.random() * 1000,
-                  repeat: -1,
-                  delay: Math.random() * 2000,
-                })
-              }
-
-              // Touch-friendly interactive zone
-              const zone = this.add.zone(isoX, isoY + TILE_H / 2, TILE_W, TILE_H)
-              zone.setInteractive()
-              zone.on('pointerdown', () => {
-                const types = ['water', 'grass', 'dirt', 'tree', 'polluted']
-                onTileClick?.(types[tileType] ?? 'unknown')
-              })
-            }
-          }
-
-          // Pollution haze
-          if (pollution > 50) {
-            const haze = this.add.graphics()
-            haze.fillStyle(0x5a4a00, 0.12 * (pollution / 100))
-            haze.fillRect(0, 0, W, H)
-          }
-
-          // Biodiversity particles
-          if (biodiversity > 40) {
-            const count = Math.min(5, Math.floor(biodiversity / 20))
-            for (let i = 0; i < count; i++) {
-              const p = this.add.graphics()
-              p.fillStyle(0x4ade80, 0.8)
-              p.fillCircle(0, 0, Math.max(2, TILE_W * 0.05))
-              p.x = Phaser.Math.Between(30, W - 30)
-              p.y = Phaser.Math.Between(30, H - 60)
-              this.tweens.add({
-                targets: p,
-                x: p.x + Phaser.Math.Between(-50, 50),
-                y: p.y + Phaser.Math.Between(-30, 30),
-                duration: 2000 + Math.random() * 2000,
-                repeat: -1,
-                yoyo: true,
-                ease: 'Sine.easeInOut',
-                delay: Math.random() * 2000,
-              })
-            }
-          }
-
-          // Legend — responsive spacing
-          const legendY = H - 22
-          const itemW = Math.floor(W / 4)
-          const legendItems = [
-            { color: dynamicWater, label: 'Sungai' },
-            { color: 0x2d7a3a,     label: 'Tanah'  },
-            { color: 0x1a5c28,     label: 'Pohon'  },
-            { color: dynamicPoll,  label: 'Cemar'  },
-          ]
-          const fontSize = W < 380 ? '8px' : '9px'
-          legendItems.forEach((item, i) => {
-            const lx = i * itemW + 8
-            const lg = this.add.graphics()
-            lg.fillStyle(item.color, 1)
-            lg.fillRect(lx, legendY, 8, 8)
-            this.add.text(lx + 11, legendY, item.label, {
-              fontSize,
-              color: '#86efac',
-              fontFamily: 'Arial',
-            })
-          })
-        }
-      }
-
-      const config = {
-        type: Phaser.CANVAS,
-        width: W,
-        height: H,
-        backgroundColor: '#0a1a14',
-        parent: containerRef.current,
-        scene: IsoScene,
-        antialias: false,
-        // Scale to fill container on any screen
-        scale: {
-          mode: Phaser.Scale.FIT,
-          autoCenter: Phaser.Scale.CENTER_BOTH,
-          width: W,
-          height: H,
-        },
-      }
-
-      if (destroyed) return
-      const game = new Phaser.Game(config as ConstructorParameters<typeof Phaser.Game>[0])
-      gameRef.current = game
+    const tileTop: Record<number, string> = {
+      0: waterColor,
+      1: '#2d7a3a',
+      2: '#8b6914',
+      3: '#1a5c28',
+      4: pollColor,
+    }
+    const tileSide: Record<number, string> = {
+      0: waterDark,
+      1: '#1a5225',
+      2: '#6b4f10',
+      3: '#0f3a18',
+      4: pollDark,
     }
 
-    initPhaser()
+    // Clear
+    ctx.fillStyle = '#0a1a14'
+    ctx.fillRect(0, 0, W, H)
 
-    // Resize observer — rebuild game if container size changes significantly
-    let resizeTimer: ReturnType<typeof setTimeout>
-    const observer = new ResizeObserver(() => {
-      clearTimeout(resizeTimer)
-      resizeTimer = setTimeout(() => {
-        if (gameRef.current) {
-          gameRef.current.destroy(true)
-          gameRef.current = null
+    // Draw tiles back to front (painter's algorithm)
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        const tileType = MAP[row][col]
+        const drawType = (tileType === 1 && trees > 30 && (row + col) % 3 === 0) ? 3 : tileType
+
+        const isoX = offsetX + (col - row) * (TILE_W / 2)
+        const isoY = offsetY + (col + row) * (TILE_H / 2)
+
+        // Left face
+        ctx.fillStyle = tileSide[tileType]
+        ctx.beginPath()
+        ctx.moveTo(isoX - TILE_W / 2, isoY + TILE_H / 2)
+        ctx.lineTo(isoX, isoY + TILE_H)
+        ctx.lineTo(isoX, isoY + TILE_H + SIDE)
+        ctx.lineTo(isoX - TILE_W / 2, isoY + TILE_H / 2 + SIDE)
+        ctx.closePath()
+        ctx.fill()
+
+        // Right face (slightly lighter than left)
+        ctx.fillStyle = tileTop[tileType]
+        ctx.globalAlpha = 0.6
+        ctx.beginPath()
+        ctx.moveTo(isoX, isoY + TILE_H)
+        ctx.lineTo(isoX + TILE_W / 2, isoY + TILE_H / 2)
+        ctx.lineTo(isoX + TILE_W / 2, isoY + TILE_H / 2 + SIDE)
+        ctx.lineTo(isoX, isoY + TILE_H + SIDE)
+        ctx.closePath()
+        ctx.fill()
+        ctx.globalAlpha = 1
+
+        // Top face
+        ctx.fillStyle = tileTop[tileType]
+        ctx.beginPath()
+        ctx.moveTo(isoX, isoY)
+        ctx.lineTo(isoX + TILE_W / 2, isoY + TILE_H / 2)
+        ctx.lineTo(isoX, isoY + TILE_H)
+        ctx.lineTo(isoX - TILE_W / 2, isoY + TILE_H / 2)
+        ctx.closePath()
+        ctx.fill()
+
+        // Water ripple
+        if (tileType === 0) {
+          const phase = (rippleRef.current / 60 + row * 0.3 + col * 0.2) % 1
+          ctx.strokeStyle = `rgba(77,212,240,${0.15 + phase * 0.1})`
+          ctx.lineWidth = 1
+          ctx.beginPath()
+          ctx.ellipse(isoX, isoY + TILE_H / 2, TILE_W * 0.3 * (0.8 + phase * 0.4), TILE_H * 0.2 * (0.8 + phase * 0.4), 0, 0, Math.PI * 2)
+          ctx.stroke()
         }
-        if (!destroyed) initPhaser()
-      }, 300)
+
+        // Tree
+        if (drawType === 3) {
+          const tw = Math.max(3, TILE_W * 0.07)
+          const th = TILE_H * 0.55
+          const cr = TILE_W * 0.18
+
+          ctx.fillStyle = '#5a3a1a'
+          ctx.fillRect(isoX - tw / 2, isoY - th, tw, th)
+
+          ctx.fillStyle = '#1a7a2a'
+          ctx.beginPath()
+          ctx.arc(isoX, isoY - th - cr * 0.4, cr, 0, Math.PI * 2)
+          ctx.fill()
+
+          ctx.fillStyle = '#22a83a'
+          ctx.beginPath()
+          ctx.arc(isoX, isoY - th - cr * 0.9, cr * 0.65, 0, Math.PI * 2)
+          ctx.fill()
+        }
+      }
+    }
+
+    // Pollution haze
+    if (pollution > 40) {
+      ctx.fillStyle = `rgba(80,60,0,${0.1 * (pollution / 100)})`
+      ctx.fillRect(0, 0, W, H)
+    }
+
+    // Biodiversity particles
+    if (biodiversity > 30) {
+      particlesRef.current.forEach((p) => {
+        const alpha = 0.5 + Math.sin(p.phase) * 0.3
+        ctx.fillStyle = `rgba(74,222,128,${alpha})`
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2)
+        ctx.fill()
+      })
+    }
+
+    // Legend
+    const legendY = H - 18
+    const itemW = Math.floor(W / 4)
+    const fontSize = W < 360 ? 8 : 9
+    ctx.font = `${fontSize}px Arial`
+    const legendItems = [
+      { color: waterColor, label: 'Sungai' },
+      { color: '#2d7a3a', label: 'Tanah'  },
+      { color: '#1a5c28', label: 'Pohon'  },
+      { color: pollColor, label: 'Cemar'  },
+    ]
+    legendItems.forEach((item, i) => {
+      const lx = i * itemW + 6
+      ctx.fillStyle = item.color
+      ctx.fillRect(lx, legendY, 8, 8)
+      ctx.fillStyle = '#86efac'
+      ctx.fillText(item.label, lx + 11, legendY + 8)
     })
-    if (containerRef.current) observer.observe(containerRef.current)
-
-    return () => {
-      destroyed = true
-      clearTimeout(resizeTimer)
-      observer.disconnect()
-      if (gameRef.current) {
-        gameRef.current.destroy(true)
-        gameRef.current = null
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pollution, biodiversity, waterQuality, trees])
 
+  // Init particles
+  useEffect(() => {
+    if (!canvasRef.current) return
+    const W = canvasRef.current.width
+    const H = canvasRef.current.height
+    const count = Math.min(6, Math.floor(biodiversity / 15))
+    particlesRef.current = Array.from({ length: count }, () => ({
+      x: 30 + Math.random() * (W - 60),
+      y: 30 + Math.random() * (H - 60),
+      vx: (Math.random() - 0.5) * 0.6,
+      vy: (Math.random() - 0.5) * 0.4,
+      phase: Math.random() * Math.PI * 2,
+    }))
+  }, [biodiversity])
+
+  // Animation loop
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    let running = true
+    const loop = () => {
+      if (!running) return
+      rippleRef.current = (rippleRef.current + 1) % 60
+
+      // Update particles
+      const W = canvas.width
+      const H = canvas.height
+      particlesRef.current.forEach((p) => {
+        p.x += p.vx
+        p.y += p.vy
+        p.phase += 0.04
+        if (p.x < 10 || p.x > W - 10) p.vx *= -1
+        if (p.y < 10 || p.y > H - 10) p.vy *= -1
+      })
+
+      draw(canvas)
+      animRef.current = requestAnimationFrame(loop)
+    }
+
+    animRef.current = requestAnimationFrame(loop)
+    return () => {
+      running = false
+      cancelAnimationFrame(animRef.current)
+    }
+  }, [draw])
+
+  // Resize observer
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const parent = canvas.parentElement
+    if (!parent) return
+
+    const observer = new ResizeObserver(() => {
+      canvas.width = parent.offsetWidth || 360
+      canvas.height = parent.offsetHeight || 260
+    })
+    observer.observe(parent)
+
+    // Initial size
+    canvas.width = parent.offsetWidth || 360
+    canvas.height = parent.offsetHeight || 260
+
+    return () => observer.disconnect()
+  }, [])
+
+  // Touch/click handler
+  const handleInteraction = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const rect = canvas.getBoundingClientRect()
+
+    let clientX: number, clientY: number
+    if ('touches' in e) {
+      clientX = e.touches[0].clientX
+      clientY = e.touches[0].clientY
+    } else {
+      clientX = e.clientX
+      clientY = e.clientY
+    }
+
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    const x = (clientX - rect.left) * scaleX
+    const y = (clientY - rect.top) * scaleY
+
+    const W = canvas.width
+    const H = canvas.height
+    const TILE_W = W < 360 ? 36 : W < 480 ? 46 : 58
+    const TILE_H = TILE_W / 2
+    const ROWS = MAP.length
+    const COLS = MAP[0].length
+    const mapH = (ROWS + COLS) * (TILE_H / 2)
+    const offsetX = W / 2
+    const offsetY = Math.max(16, (H - mapH - Math.round(TILE_H * 0.45)) / 2)
+
+    // Find closest tile
+    let closest = { dist: Infinity, type: 1 }
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        const isoX = offsetX + (col - row) * (TILE_W / 2)
+        const isoY = offsetY + (col + row) * (TILE_H / 2) + TILE_H / 2
+        const dist = Math.hypot(x - isoX, y - isoY)
+        if (dist < closest.dist) {
+          closest = { dist, type: MAP[row][col] }
+        }
+      }
+    }
+
+    if (closest.dist < TILE_W) {
+      onTileClick?.(TILE_TYPES[closest.type] ?? 'unknown')
+    }
+  }, [onTileClick])
+
   return (
-    <div
-      ref={containerRef}
-      className="w-full h-full"
-      style={{ minHeight: '200px', touchAction: 'none' }}
+    <canvas
+      ref={canvasRef}
+      className="w-full h-full block"
+      style={{ touchAction: 'none' }}
+      onClick={handleInteraction}
+      onTouchStart={handleInteraction}
     />
   )
 }
