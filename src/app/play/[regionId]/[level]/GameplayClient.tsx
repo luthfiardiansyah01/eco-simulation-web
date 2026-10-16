@@ -8,6 +8,45 @@ import { checkAndUnlockAchievements } from '@/lib/supabase/achievements'
 import AchievementToast from '@/components/game/AchievementToast'
 import IsometricMap from '@/components/game/IsometricMap'
 
+// Objective condition checker — maps objective text to a live check function
+type ObjCheck = { label: string; check: (s: EnvironmentStatus) => boolean; progress: (s: EnvironmentStatus) => string }
+
+function buildObjectiveChecks(objectives: string[]): ObjCheck[] {
+  return objectives.map((obj) => {
+    const lower = obj.toLowerCase()
+
+    if (lower.includes('pollution') && lower.includes('20')) {
+      return { label: obj, check: (s) => s.pollution <= 20, progress: (s) => `Polusi: ${s.pollution}% → target ≤20%` }
+    }
+    if (lower.includes('pollution') && lower.includes('30')) {
+      return { label: obj, check: (s) => s.pollution <= 30, progress: (s) => `Polusi: ${s.pollution}% → target ≤30%` }
+    }
+    if (lower.includes('fish')) {
+      return { label: obj, check: (s) => s.fishPopulation >= 60, progress: (s) => `Ikan: ${s.fishPopulation}% → target ≥60%` }
+    }
+    if (lower.includes('tree') && lower.includes('50')) {
+      return { label: obj, check: (s) => s.trees >= 50, progress: (s) => `Pohon: ${s.trees}/50` }
+    }
+    if (lower.includes('tree') && lower.includes('100')) {
+      return { label: obj, check: (s) => s.trees >= 100, progress: (s) => `Pohon: ${s.trees}/100` }
+    }
+    if (lower.includes('biodiversity') && lower.includes('60')) {
+      return { label: obj, check: (s) => s.biodiversity >= 60, progress: (s) => `Biodiv: ${s.biodiversity}% → target ≥60%` }
+    }
+    if (lower.includes('biodiversity') && lower.includes('70')) {
+      return { label: obj, check: (s) => s.biodiversity >= 70, progress: (s) => `Biodiv: ${s.biodiversity}% → target ≥70%` }
+    }
+    if (lower.includes('water')) {
+      return { label: obj, check: (s) => s.waterQuality >= 70, progress: (s) => `Air: ${s.waterQuality}% → target ≥70%` }
+    }
+    if (lower.includes('logging') || lower.includes('drone')) {
+      return { label: obj, check: (s) => s.drones >= 5, progress: (s) => `Drone: ${s.drones}/5` }
+    }
+    // Default fallback
+    return { label: obj, check: () => false, progress: () => 'Lanjutkan misi...' }
+  })
+}
+
 const ACTIONS: { emoji: string; label: string; action: GameAction; cost: string }[] = [
   { emoji: '🗑️', label: 'Bersihkan',   action: 'clean_waste',  cost: '-50💰' },
   { emoji: '🌱', label: 'Tanam Pohon', action: 'plant_tree',   cost: '-30💰' },
@@ -34,11 +73,15 @@ const initialLogs: EventLog[] = [
 export default function GameplayClient({ mission, regionId, level }: { mission: Mission; regionId: string; level: number }) {
   const [status, setStatus] = useState<EnvironmentStatus>(initialStatus)
   const [logs, setLogs] = useState<EventLog[]>(initialLogs)
-  const [progress, setProgress] = useState(12)
   const [missionComplete, setMissionComplete] = useState(false)
   const [saving, setSaving] = useState(false)
   const [newAchievements, setNewAchievements] = useState<Achievement[]>([])
   const [totalMissionsCompleted, setTotalMissionsCompleted] = useState(0)
+
+  const objChecks = buildObjectiveChecks(mission.objectives)
+  const objResults = objChecks.map((o) => ({ ...o, done: o.check(status), progress: o.progress(status) }))
+  const completedObjs = objResults.filter((o) => o.done).length
+  const progress = Math.round((completedObjs / objChecks.length) * 100)
 
   function lockOrientation(orientation: 'landscape' | 'portrait') {
     // Native Android bridge (most reliable)
@@ -76,6 +119,12 @@ export default function GameplayClient({ mission, regionId, level }: { mission: 
     return () => clearTimeout(t)
   }, [newAchievements])
 
+  // Check mission complete whenever status changes
+  useEffect(() => {
+    checkMissionComplete(status, progress)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, progress])
+
   const checkMissionComplete = useCallback(async (s: EnvironmentStatus, prog: number) => {
     if (prog >= 100 && !missionComplete) {
       setMissionComplete(true)
@@ -109,11 +158,6 @@ export default function GameplayClient({ mission, regionId, level }: { mission: 
       return next
     })
     setLogs((prev) => [newLog, ...prev.slice(0, 9)])
-    setProgress((prev) => {
-      const next = Math.min(100, prev + 3)
-      checkMissionComplete(status, next)
-      return next
-    })
   }
 
   const barColor = (val: number, inv = false) => {
@@ -226,11 +270,31 @@ export default function GameplayClient({ mission, regionId, level }: { mission: 
                 ))}
               </div>
 
+              {/* Objectives real-time */}
+              <div>
+                <p className="text-[8px] text-[var(--text-muted)] uppercase tracking-widest mb-1.5">Objektif</p>
+                <div className="space-y-2">
+                  {objResults.map((obj, i) => (
+                    <div key={i}>
+                      <div className="flex items-start gap-1 mb-0.5">
+                        <span className="text-[10px] flex-shrink-0 mt-0.5">{obj.done ? '✅' : '⬜'}</span>
+                        <p className="text-[8px] leading-tight" style={{ color: obj.done ? '#4ade80' : '#86efac' }}>
+                          {obj.label}
+                        </p>
+                      </div>
+                      <p className="text-[7px] pl-3.5" style={{ color: obj.done ? '#22c55e' : '#6b9e7a' }}>
+                        {obj.progress}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Event log */}
               <div>
                 <p className="text-[8px] text-[var(--text-muted)] uppercase tracking-widest mb-1">Log</p>
                 <div className="space-y-1">
-                  {logs.slice(0, 4).map((log) => (
+                  {logs.slice(0, 3).map((log) => (
                     <p key={log.id} className="text-[8px] leading-tight" style={{ color: log.type === 'alert' ? '#f87171' : log.type === 'success' ? '#4ade80' : '#6b9e7a' }}>
                       {log.type === 'alert' ? '⚠' : log.type === 'success' ? '✓' : '›'} {log.message}
                     </p>
