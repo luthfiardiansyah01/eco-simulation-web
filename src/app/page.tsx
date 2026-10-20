@@ -1,7 +1,17 @@
+'use client'
+
 import Link from 'next/link'
 import AuthButton from '@/components/layout/AuthButton'
+import { useState } from 'react'
+import OnboardingTutorial from '@/components/ui/OnboardingTutorial'
 
 export default function Home() {
+  const [showTutorial, setShowTutorial] = useState(false)
+
+  // Auto-show on first ever visit (checked client-side only)
+  // OnboardingTutorial with forceOpen=false reads localStorage itself,
+  // so we just mount it once and let it self-manage visibility.
+  // For manual re-open, we use forceOpen=true.
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
 
@@ -97,10 +107,26 @@ export default function Home() {
         </div>
 
         {/* Footer hint */}
-        <p className="text-center text-xs text-[var(--text-muted)] mt-8">
-          Selamatkan ekosistem sungai Jawa — satu misi dalam satu waktu 🌱
-        </p>
+        <div className="flex items-center justify-between mt-8">
+          <p className="text-xs text-[var(--text-muted)]">
+            Selamatkan ekosistem sungai Jawa 🌱
+          </p>
+          <button
+            onClick={() => setShowTutorial(true)}
+            className="badge badge-teal text-[10px] cursor-pointer hover:opacity-80 transition-opacity"
+          >
+            ❓ Tutorial
+          </button>
+        </div>
       </div>
+
+      {/* Auto-show on first visit */}
+      <OnboardingTutorial />
+
+      {/* Manual re-open */}
+      {showTutorial && (
+        <OnboardingTutorial forceOpen onClose={() => setShowTutorial(false)} />
+      )}
     </main>
   )
 }
