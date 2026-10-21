@@ -1,12 +1,19 @@
 {
+  "id": "/",
   "name": "Eco-Simulation Interface",
   "short_name": "EcoSim",
   "description": "River ecosystem simulation adventure game",
+  "lang": "id",
+  "dir": "ltr",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
   "background_color": "#3a3f5c",
   "theme_color": "#3a3f5c",
-  "orientation": "portrait-primary",
+  "categories": ["education", "games"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
@@ -49,6 +56,30 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Adventure Mode",
+      "short_name": "Adventure",
+      "url": "/region",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "short_name": "Profile",
+      "url": "/profile",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }
