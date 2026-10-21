@@ -42,7 +42,7 @@ export default async function BriefingPage({
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <span className="badge badge-teal">Level {mission.level}</span>
-                <span className="badge badge-amber">⭐ +250 pts</span>
+                <span className="badge badge-amber">⭐ +{mission.researchPoints} pts</span>
               </div>
               <h1 className="text-xl font-bold text-white mb-1">{mission.title}</h1>
               <p className="text-xs text-[var(--text-muted)]">📍 {mission.location}</p>
@@ -69,9 +69,9 @@ export default async function BriefingPage({
           </div>
           <ul className="space-y-2.5">
             {mission.objectives.map((obj, i) => (
-              <li key={obj} className="flex items-start gap-3">
+              <li key={`${obj.metric}-${obj.target}`} className="flex items-start gap-3">
                 <span className="text-base mt-0.5 flex-shrink-0">{objectiveIcons[i] ?? '•'}</span>
-                <span className="text-sm text-[var(--foreground)] opacity-85">{obj}</span>
+                <span className="text-sm text-[var(--foreground)] opacity-85">{obj.label}</span>
               </li>
             ))}
           </ul>

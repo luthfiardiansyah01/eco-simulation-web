@@ -1,5 +1,6 @@
 import { createClient } from './server'
-import { UserProgress } from '@/types'
+import { mapUserProgress, type UserProgressRow } from './mappers'
+import type { UserProgress } from '@/types'
 
 export async function getProgressServer(regionId: string): Promise<UserProgress | null> {
   const supabase = await createClient()
@@ -14,14 +15,7 @@ export async function getProgressServer(regionId: string): Promise<UserProgress 
     .single()
 
   if (!data) return null
-  return {
-    userId: data.user_id,
-    regionId: data.region_id,
-    currentLevel: data.current_level,
-    completedLevels: data.completed_levels ?? [],
-    researchPoints: data.research_points,
-    unlockedItems: data.unlocked_items ?? [],
-  }
+  return mapUserProgress(data as UserProgressRow)
 }
 
 export async function getAllProgressServer(): Promise<UserProgress[]> {
@@ -34,12 +28,5 @@ export async function getAllProgressServer(): Promise<UserProgress[]> {
     .select('*')
     .eq('user_id', user.id)
 
-  return (data ?? []).map((d) => ({
-    userId: d.user_id,
-    regionId: d.region_id,
-    currentLevel: d.current_level,
-    completedLevels: d.completed_levels ?? [],
-    researchPoints: d.research_points,
-    unlockedItems: d.unlocked_items ?? [],
-  }))
+  return ((data ?? []) as UserProgressRow[]).map(mapUserProgress)
 }

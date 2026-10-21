@@ -15,6 +15,23 @@ export type MissionLevel = {
   completed: boolean
 }
 
+export type ObjectiveMetric =
+  | 'pollution'
+  | 'biodiversity'
+  | 'waterQuality'
+  | 'fishPopulation'
+  | 'trees'
+  | 'drones'
+
+export type ObjectiveComparator = 'lte' | 'gte'
+
+export type MissionObjective = {
+  label: string
+  metric: ObjectiveMetric
+  comparator: ObjectiveComparator
+  target: number
+}
+
 export type Mission = {
   id: string
   regionId: string
@@ -22,8 +39,11 @@ export type Mission = {
   title: string
   location: string
   story: string
-  objectives: string[]
+  objectives: MissionObjective[]
   rewards: string[]
+  researchPoints: number
+  startingCredits: number
+  startingEnergy: number
 }
 
 export type EnvironmentStatus = {
@@ -55,12 +75,18 @@ export type UserProgress = {
   unlockedItems: string[]
 }
 
+export type AchievementCondition =
+  | 'trees_planted'
+  | 'pollution_below'
+  | 'missions_completed'
+  | 'research_points'
+
 export type Achievement = {
   id: string
   title: string
   description: string
   icon: string
-  conditionType: string
+  conditionType: AchievementCondition
   conditionValue: number
 }
 

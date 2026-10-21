@@ -13,7 +13,10 @@ function lockOrientation(orientation: 'landscape' | 'portrait') {
   } catch { /* ignore */ }
   try {
     if (screen.orientation && 'lock' in screen.orientation) {
-      (screen.orientation as ScreenOrientation & { lock: (o: string) => Promise<void> }).lock(orientation)
+      const orientationApi = screen.orientation as ScreenOrientation & {
+        lock: (o: string) => Promise<void>
+      }
+      void orientationApi.lock(orientation).catch(() => { /* unsupported */ })
     }
   } catch { /* ignore */ }
 }

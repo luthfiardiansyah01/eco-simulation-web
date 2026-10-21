@@ -11,18 +11,32 @@ export default function ProfilePage() {
   const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([])
   const [username, setUsername] = useState<string>('')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
+    let cancelled = false
+
     async function load() {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) setUsername(user.email?.split('@')[0] ?? 'Player')
-      const [all, unlocked] = await Promise.all([getAllAchievements(), getUserAchievements()])
-      setAchievements(all)
-      setUserAchievements(unlocked)
-      setLoading(false)
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        const [all, unlocked] = await Promise.all([getAllAchievements(), getUserAchievements()])
+        if (cancelled) return
+        if (user) setUsername(user.email?.split('@')[0] ?? 'Player')
+        setAchievements(all)
+        setUserAchievements(unlocked)
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Failed to load profile', err)
+          setError('Gagal memuat achievement. Coba muat ulang halaman.')
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
-    load()
+
+    void load()
+    return () => { cancelled = true }
   }, [])
 
   const unlockedIds = new Set(userAchievements.map((u) => u.achievementId))
@@ -92,7 +106,11 @@ export default function ProfilePage() {
         {/* Achievement grid */}
         <h2 className="text-xs text-[var(--text-muted)] uppercase tracking-widest mb-3">Daftar Achievement</h2>
 
-        {loading ? (
+        {error ? (
+          <div className="eco-card p-4 text-xs" style={{ color: '#f87171' }}>
+            ⚠ {error}
+          </div>
+        ) : loading ? (
           <div className="eco-card p-8 text-center">
             <span className="text-2xl float">⏳</span>
             <p className="text-sm text-[var(--text-muted)] mt-2">Memuat achievement...</p>

@@ -23,10 +23,6 @@ const MAP = [
 
 const TILE_TYPES = ['water', 'grass', 'dirt', 'tree', 'polluted']
 
-function hexToRgb(hex: number) {
-  return { r: (hex >> 16) & 0xff, g: (hex >> 8) & 0xff, b: hex & 0xff }
-}
-
 function lerp(a: number, b: number, t: number) {
   return Math.round(a * (1 - t) + b * t)
 }

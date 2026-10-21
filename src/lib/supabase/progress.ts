@@ -1,64 +1,55 @@
 import { createClient } from './client'
-import { UserProgress } from '@/types'
+import { mapUserProgress, type UserProgressRow } from './mappers'
+import type { UserProgress } from '@/types'
 
-export async function getProgress(regionId: string): Promise<UserProgress | null> {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-
-  const { data } = await supabase
-    .from('user_progress')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('region_id', regionId)
-    .single()
-
-  if (!data) return null
-  return {
-    userId: data.user_id,
-    regionId: data.region_id,
-    currentLevel: data.current_level,
-    completedLevels: data.completed_levels ?? [],
-    researchPoints: data.research_points,
-    unlockedItems: data.unlocked_items ?? [],
-  }
+export type MissionResultStats = {
+  pollutionFinal: number
+  biodiversityFinal: number
+  treesPlanted: number
+  researchPointsEarned: number
 }
 
-export async function saveProgress(
-  regionId: string,
-  update: Partial<Pick<UserProgress, 'currentLevel' | 'completedLevels' | 'researchPoints' | 'unlockedItems'>>
-): Promise<void> {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
+export type CompleteMissionResult =
+  | { ok: true; progress: UserProgress }
+  | { ok: false; reason: 'guest' | 'error'; message?: string }
 
-  await supabase.from('user_progress').upsert({
-    user_id: user.id,
-    region_id: regionId,
-    current_level: update.currentLevel,
-    completed_levels: update.completedLevels,
-    research_points: update.researchPoints,
-    unlocked_items: update.unlockedItems,
-    updated_at: new Date().toISOString(),
-  }, { onConflict: 'user_id,region_id' })
-}
-
-export async function saveMissionResult(
+/**
+ * Persists a completed mission atomically:
+ * - records/updates the mission result,
+ * - merges the completed level into the player's region progress,
+ * - accumulates research points (never resets them),
+ * - only awards points the first time a level is completed.
+ */
+export async function completeMission(
   regionId: string,
   level: number,
-  result: { pollutionFinal: number; biodiversityFinal: number; treesPlanted: number; researchPointsEarned: number }
-): Promise<void> {
+  stats: MissionResultStats
+): Promise<CompleteMissionResult> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
+  if (!user) return { ok: false, reason: 'guest' }
 
-  await supabase.from('mission_results').insert({
-    user_id: user.id,
-    region_id: regionId,
-    level,
-    pollution_final: result.pollutionFinal,
-    biodiversity_final: result.biodiversityFinal,
-    trees_planted: result.treesPlanted,
-    research_points_earned: result.researchPointsEarned,
+  const { data, error } = await supabase.rpc('complete_mission', {
+    p_region_id: regionId,
+    p_level: level,
+    p_pollution: stats.pollutionFinal,
+    p_biodiversity: stats.biodiversityFinal,
+    p_trees: stats.treesPlanted,
+    p_research_points: stats.researchPointsEarned,
   })
+
+  if (error) {
+    console.error('complete_mission failed', error)
+    const message = error.code === 'PGRST202'
+      ? 'Fungsi complete_mission belum tersedia. Jalankan migrasi Supabase.'
+      : error.message
+    return { ok: false, reason: 'error', message }
+  }
+
+  const row = (Array.isArray(data) ? data[0] : data) as UserProgressRow | null
+  if (!row) {
+    return { ok: false, reason: 'error', message: 'Progress tidak dikembalikan oleh server.' }
+  }
+
+  return { ok: true, progress: mapUserProgress(row) }
 }

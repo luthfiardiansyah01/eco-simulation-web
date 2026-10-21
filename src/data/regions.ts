@@ -52,15 +52,18 @@ export const MISSIONS: Mission[] = [
     story:
       'The rivers surrounding Bandung have begun showing dangerous levels of pollution due to illegal waste disposal and ecosystem imbalance. As the lead environmental researcher, your task is to restore water quality and prevent further ecological collapse.',
     objectives: [
-      'Reduce water pollution below 20%',
-      'Restore fish population',
-      'Plant 50 riverbank trees',
+      { label: 'Reduce water pollution below 20%', metric: 'pollution', comparator: 'lte', target: 20 },
+      { label: 'Restore fish population above 60%', metric: 'fishPopulation', comparator: 'gte', target: 60 },
+      { label: 'Plant 50 riverbank trees', metric: 'trees', comparator: 'gte', target: 50 },
     ],
     rewards: [
       '+250 Research Points',
       'Unlock Advanced Water Filters',
       'Unlock Level 2',
     ],
+    researchPoints: 250,
+    startingCredits: 2000,
+    startingEnergy: 270,
   },
   {
     id: 'west-java-2',
@@ -71,14 +74,17 @@ export const MISSIONS: Mission[] = [
     story:
       'The highland forests surrounding Bandung are facing deforestation threats. Wildlife populations have declined significantly. Your mission is to restore the forest ecosystem and protect native species.',
     objectives: [
-      'Plant 100 native trees',
-      'Restore biodiversity above 60%',
-      'Remove 10 illegal logging sites',
+      { label: 'Plant 100 native trees', metric: 'trees', comparator: 'gte', target: 100 },
+      { label: 'Restore biodiversity above 60%', metric: 'biodiversity', comparator: 'gte', target: 60 },
+      { label: 'Deploy 5 survey drones to map illegal logging', metric: 'drones', comparator: 'gte', target: 5 },
     ],
     rewards: [
       '+400 Research Points',
       'Unlock Drone Fleet',
       'Unlock Level 3',
     ],
+    researchPoints: 400,
+    startingCredits: 2500,
+    startingEnergy: 300,
   },
 ]

@@ -167,11 +167,20 @@ export default function OnboardingTutorial({ forceOpen, onClose }: Props = {}) {
   const [step, setStep] = useState(0)
 
   useEffect(() => {
-    if (forceOpen) { setVisible(true); setStep(0); return }
-    try {
-      const seen = localStorage.getItem('ecosim_onboarding_done')
-      if (!seen) setVisible(true)
-    } catch { /* storage blocked */ }
+    // Defer the visibility update to the next frame: reading localStorage is an
+    // external-system sync, and this avoids a cascading render inside the effect.
+    const frame = requestAnimationFrame(() => {
+      if (forceOpen) {
+        setVisible(true)
+        setStep(0)
+        return
+      }
+      try {
+        const seen = localStorage.getItem('ecosim_onboarding_done')
+        if (!seen) setVisible(true)
+      } catch { /* storage blocked */ }
+    })
+    return () => cancelAnimationFrame(frame)
   }, [forceOpen])
 
   function finish() {

@@ -1,17 +1,39 @@
 import { createClient } from './client'
-import { Achievement, UserAchievement } from '@/types'
+import type { Achievement, AchievementCondition, UserAchievement } from '@/types'
+
+type AchievementRow = {
+  id: string
+  title: string
+  description: string
+  icon: string
+  condition_type: AchievementCondition
+  condition_value: number
+}
+
+function mapAchievement(row: AchievementRow): Achievement {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    icon: row.icon,
+    conditionType: row.condition_type,
+    conditionValue: row.condition_value,
+  }
+}
 
 export async function getAllAchievements(): Promise<Achievement[]> {
   const supabase = createClient()
-  const { data } = await supabase.from('achievements').select('*')
-  return (data ?? []).map((d) => ({
-    id: d.id,
-    title: d.title,
-    description: d.description,
-    icon: d.icon,
-    conditionType: d.condition_type,
-    conditionValue: d.condition_value,
-  }))
+  const { data, error } = await supabase
+    .from('achievements')
+    .select('*')
+    .order('condition_type')
+    .order('condition_value', { ascending: true })
+
+  if (error) {
+    console.error('Failed to load achievements', error)
+    return []
+  }
+  return ((data ?? []) as AchievementRow[]).map(mapAchievement)
 }
 
 export async function getUserAchievements(): Promise<UserAchievement[]> {
@@ -19,10 +41,16 @@ export async function getUserAchievements(): Promise<UserAchievement[]> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('user_achievements')
     .select('achievement_id, unlocked_at')
     .eq('user_id', user.id)
+    .order('unlocked_at', { ascending: false })
+
+  if (error) {
+    console.error('Failed to load user achievements', error)
+    return []
+  }
 
   return (data ?? []).map((d) => ({
     achievementId: d.achievement_id,
@@ -30,54 +58,71 @@ export async function getUserAchievements(): Promise<UserAchievement[]> {
   }))
 }
 
-export async function unlockAchievement(achievementId: string): Promise<boolean> {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return false
-
-  const { error } = await supabase
-    .from('user_achievements')
-    .insert({ user_id: user.id, achievement_id: achievementId })
-
-  return !error
-}
-
-export async function checkAndUnlockAchievements(stats: {
+export type AchievementStats = {
   treesPlanted: number
   pollutionLevel: number
   missionsCompleted: number
   researchPoints: number
-}): Promise<Achievement[]> {
+}
+
+function isConditionMet(achievement: Achievement, stats: AchievementStats): boolean {
+  switch (achievement.conditionType) {
+    case 'trees_planted':
+      return stats.treesPlanted >= achievement.conditionValue
+    case 'pollution_below':
+      return stats.pollutionLevel <= achievement.conditionValue
+    case 'missions_completed':
+      return stats.missionsCompleted >= achievement.conditionValue
+    case 'research_points':
+      return stats.researchPoints >= achievement.conditionValue
+    default:
+      return false
+  }
+}
+
+/**
+ * Evaluates every locked achievement against the player's cumulative stats
+ * and inserts all newly earned rows in one request.
+ */
+export async function checkAndUnlockAchievements(stats: AchievementStats): Promise<Achievement[]> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
-  const [allData, unlockedData] = await Promise.all([
+  const [allResult, unlockedResult] = await Promise.all([
     supabase.from('achievements').select('*'),
     supabase.from('user_achievements').select('achievement_id').eq('user_id', user.id),
   ])
 
-  const all: Achievement[] = (allData.data ?? []).map((d) => ({
-    id: d.id, title: d.title, description: d.description, icon: d.icon,
-    conditionType: d.condition_type, conditionValue: d.condition_value,
-  }))
-  const unlockedIds = new Set((unlockedData.data ?? []).map((d) => d.achievement_id))
+  if (allResult.error) {
+    console.error('Failed to evaluate achievements', allResult.error)
+    return []
+  }
+  if (unlockedResult.error) {
+    console.error('Failed to load unlocked achievements', unlockedResult.error)
+    return []
+  }
 
-  const newlyUnlocked: Achievement[] = []
+  const unlockedIds = new Set((unlockedResult.data ?? []).map((d) => d.achievement_id))
+  const newlyUnlocked = ((allResult.data ?? []) as AchievementRow[])
+    .map(mapAchievement)
+    .filter((achievement) => !unlockedIds.has(achievement.id) && isConditionMet(achievement, stats))
 
-  for (const a of all) {
-    if (unlockedIds.has(a.id)) continue
+  if (newlyUnlocked.length === 0) return []
 
-    let met = false
-    if (a.conditionType === 'trees_planted') met = stats.treesPlanted >= a.conditionValue
-    else if (a.conditionType === 'pollution_below') met = stats.pollutionLevel <= a.conditionValue
-    else if (a.conditionType === 'missions_completed') met = stats.missionsCompleted >= a.conditionValue
-    else if (a.conditionType === 'research_points') met = stats.researchPoints >= a.conditionValue
+  const { error } = await supabase
+    .from('user_achievements')
+    .upsert(
+      newlyUnlocked.map((achievement) => ({
+        user_id: user.id,
+        achievement_id: achievement.id,
+      })),
+      { onConflict: 'user_id,achievement_id', ignoreDuplicates: true }
+    )
 
-    if (met) {
-      const unlocked = await unlockAchievement(a.id)
-      if (unlocked) newlyUnlocked.push(a)
-    }
+  if (error) {
+    console.error('Failed to unlock achievements', error)
+    return []
   }
 
   return newlyUnlocked
