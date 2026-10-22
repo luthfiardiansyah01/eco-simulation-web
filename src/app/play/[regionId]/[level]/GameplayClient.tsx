@@ -13,7 +13,15 @@ import {
   objectiveTarget,
 } from '@/lib/gameplay/objectives'
 import AchievementToast from '@/components/game/AchievementToast'
-import IsometricMap from '@/components/game/IsometricMap'
+import IsometricMap, { type MapActionTrigger } from '@/components/game/IsometricMap'
+import SoundToggle from '@/components/audio/SoundToggle'
+import { useSound } from '@/components/audio/SoundProvider'
+import type { SoundName } from '@/lib/audio/sound-engine'
+import {
+  DIFFICULTIES,
+  getStartingStatus,
+  type Difficulty,
+} from '@/lib/gameplay/difficulty'
 
 type ActionCost = { credits?: number; energy?: number }
 type ActionDefinition = { emoji: string; label: string; action: GameAction }
@@ -41,9 +49,15 @@ const ACTIONS: ActionDefinition[] = [
   { emoji: '🏕️', label: 'Base',        action: 'return_base'  },
 ]
 
-const BASE_STATUS: EnvironmentStatus = {
-  pollution: 78, biodiversity: 22, waterQuality: 31,
-  fishPopulation: 18, trees: 23, energy: 270, credits: 1200, drones: 3,
+const ACTION_SOUNDS: Record<GameAction, SoundName> = {
+  clean_waste: 'clean',
+  plant_tree: 'plant',
+  scan_water: 'water',
+  deploy_drone: 'drone',
+  build_filter: 'filter',
+  open_map: 'map',
+  analyze_area: 'map',
+  return_base: 'click',
 }
 
 const initialLogs: EventLog[] = [
@@ -118,17 +132,27 @@ function applyAction(
   return { status: next, message, type }
 }
 
-export default function GameplayClient({ mission, regionId, level }: { mission: Mission; regionId: string; level: number }) {
-  const [status, setStatus] = useState<EnvironmentStatus>(() => ({
-    ...BASE_STATUS,
-    credits: mission.startingCredits,
-    energy: mission.startingEnergy,
-  }))
+export default function GameplayClient({
+  mission,
+  regionId,
+  level,
+  difficulty,
+}: {
+  mission: Mission
+  regionId: string
+  level: number
+  difficulty: Difficulty
+}) {
+  const { play, startAmbience, stopAmbience } = useSound()
+  const difficultyMeta = DIFFICULTIES[difficulty]
+  const [status, setStatus] = useState<EnvironmentStatus>(() => getStartingStatus(mission, difficulty))
   const [logs, setLogs] = useState<EventLog[]>(initialLogs)
   const [missionComplete, setMissionComplete] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [newAchievements, setNewAchievements] = useState<Achievement[]>([])
   const logSeq = useRef(0)
+  const startedRef = useRef(false)
+  const mapActionRef = useRef<MapActionTrigger | null>(null)
 
   const treeTarget = objectiveTarget(mission.objectives, 'trees', 50)
   const droneTarget = objectiveTarget(mission.objectives, 'drones', 5)
@@ -167,11 +191,22 @@ export default function GameplayClient({ mission, regionId, level }: { mission: 
 
     lockOrientation('landscape')
 
+    if (!startedRef.current) {
+      startedRef.current = true
+      play('start')
+    }
+
     return () => {
       el.style.removeProperty('--gameplay-active')
       lockOrientation('portrait')
     }
-  }, [])
+  }, [play])
+
+  // Keep the nature ambience scoped to the gameplay screen.
+  useEffect(() => {
+    startAmbience()
+    return () => stopAmbience()
+  }, [startAmbience, stopAmbience])
 
   useEffect(() => {
     if (newAchievements.length === 0) return
@@ -195,6 +230,7 @@ export default function GameplayClient({ mission, regionId, level }: { mission: 
 
     setMissionComplete(true)
     setSaveState('saving')
+    play('missionComplete')
 
     const result = await completeMission(regionId, level, {
       pollutionFinal: snapshot.pollution,
@@ -205,6 +241,7 @@ export default function GameplayClient({ mission, regionId, level }: { mission: 
 
     if (!result.ok) {
       setSaveState(result.reason === 'guest' ? 'guest' : 'error')
+      if (result.reason !== 'guest') play('error')
       return
     }
 
@@ -216,23 +253,34 @@ export default function GameplayClient({ mission, regionId, level }: { mission: 
       missionsCompleted: result.progress.completedLevels.length,
       researchPoints: result.progress.researchPoints,
     })
-    if (unlocked.length > 0) setNewAchievements(unlocked)
-  }, [missionComplete, regionId, level, mission.researchPoints])
+    if (unlocked.length > 0) {
+      setNewAchievements(unlocked)
+      play('achievement')
+    }
+  }, [missionComplete, regionId, level, mission.researchPoints, play])
+
+  const registerMapAction = useCallback((trigger: MapActionTrigger) => {
+    mapActionRef.current = trigger
+  }, [])
 
   const handleAction = useCallback((definition: ActionDefinition) => {
     if (!isActionUseful(definition.action, mission.objectives, status)) {
+      play('error')
       pushLog('info', `Aksi ${definition.label} tidak lagi diperlukan untuk objektif.`)
       return
     }
 
     const cost = ACTION_COSTS[definition.action]
     if (!canAfford(cost, status)) {
+      play('error')
       pushLog('alert', `Sumber daya tidak cukup untuk ${definition.label} (${formatCost(cost)}).`)
       return
     }
 
     const result = applyAction(status, definition.action, definition.label, treeTarget, droneTarget)
+    mapActionRef.current?.(definition.action)
     setStatus(result.status)
+    play(ACTION_SOUNDS[definition.action])
     pushLog(result.type, result.message)
 
     // Status only changes through this handler, so evaluate completion here
@@ -241,7 +289,7 @@ export default function GameplayClient({ mission, regionId, level }: { mission: 
       result.status,
       missionProgressPercent(mission.objectives, result.status)
     )
-  }, [status, treeTarget, droneTarget, pushLog, checkMissionComplete, mission.objectives])
+  }, [status, treeTarget, droneTarget, pushLog, checkMissionComplete, mission.objectives, play])
 
   const barColor = (val: number, inv = false) => {
     const v = inv ? 100 - val : val
@@ -274,47 +322,58 @@ export default function GameplayClient({ mission, regionId, level }: { mission: 
         }
       `}</style>
 
-      <div id="gameplay-root" className="flex flex-col" style={{ background: '#0a1a14', color: '#e8f5e9', width: '100%', height: '100dvh', overflow: 'hidden' }}>
+      <div id="gameplay-root" className="flex flex-col" style={{ background: 'var(--background)', color: 'var(--foreground)', width: '100%', height: '100dvh', overflow: 'hidden' }}>
         <AchievementToast achievements={newAchievements} />
 
         {/* Mission Complete */}
         {missionComplete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}>
-            <div className="eco-card p-6 text-center max-w-xs w-full" style={{ borderColor: '#22c55e', boxShadow: '0 0 40px rgba(74,222,128,0.3)' }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--overlay-backdrop)', backdropFilter: 'blur(8px)' }}>
+            <div className="eco-card p-6 text-center max-w-xs w-full" style={{ borderColor: 'var(--accent-green)', boxShadow: 'var(--glow-green)' }}>
               <div className="text-4xl mb-3">🎉</div>
               <h2 className="text-xl font-bold text-[var(--accent-green)] mb-1">Misi Selesai!</h2>
               <p className="text-xs text-[var(--text-muted)] mb-4">{saveMessage[saveState]}</p>
               <div className="eco-card p-3 mb-4 space-y-1.5 text-xs">
                 <div className="flex justify-between"><span className="text-[var(--text-muted)]">Research Points</span><span className="text-[var(--accent-amber)] font-bold">+{mission.researchPoints} ⭐</span></div>
+                <div className="flex justify-between"><span className="text-[var(--text-muted)]">Kesulitan</span><span className="font-semibold" style={{ color: difficultyMeta.accent }}>{difficultyMeta.label}</span></div>
                 <div className="flex justify-between"><span className="text-[var(--text-muted)]">Level berikutnya</span><span className="text-[var(--accent-teal)]">Level {level + 1} 🔓</span></div>
               </div>
               <div className="flex gap-2">
-                <Link href={`/mission/${regionId}`} className="flex-1"><button className="eco-btn-primary w-full py-2 text-xs">Lanjut →</button></Link>
-                <Link href="/" className="flex-1"><button className="eco-btn-secondary w-full py-2 text-xs">Menu</button></Link>
+                <Link href={`/mission/${regionId}`} className="flex-1"><button className="eco-btn-primary w-full py-2 text-xs" onClick={() => play('click')}>Lanjut →</button></Link>
+                <Link href="/" className="flex-1"><button className="eco-btn-secondary w-full py-2 text-xs" onClick={() => play('click')}>Menu</button></Link>
               </div>
             </div>
           </div>
         )}
 
         {/* Top bar */}
-        <div className="flex items-center justify-between px-3 py-1.5 border-b flex-shrink-0" style={{ borderColor: '#1a3a2e', background: '#0d1f1a' }}>
+        <div className="flex items-center justify-between px-3 py-1.5 border-b flex-shrink-0" style={{ borderColor: 'var(--border-card)', background: 'var(--bg-card)' }}>
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-base">🌿</span>
             <div className="min-w-0">
-              <p className="text-xs font-semibold text-white truncate">{mission.title}</p>
-              <p className="text-[9px] text-[var(--text-muted)]">{mission.location} · Lv.{level}</p>
+              <p className="text-xs font-semibold text-foreground truncate">{mission.title}</p>
+              <p className="text-[9px] text-[var(--text-muted)]">
+                {mission.location} · Lv.{level} ·{' '}
+                <span style={{ color: difficultyMeta.accent }}>{difficultyMeta.label}</span>
+              </p>
             </div>
           </div>
           {/* Progress bar */}
           <div className="flex items-center gap-2 flex-1 mx-3">
-            <div className="flex-1 h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.08)' }}>
+            <div className="flex-1 h-1.5 rounded-full" style={{ background: 'var(--track-bg)' }}>
               <div className="h-1.5 rounded-full transition-all" style={{ width: `${progress}%`, background: 'linear-gradient(90deg,#16a34a,#2dd4bf)', boxShadow: '0 0 6px rgba(45,212,191,0.5)' }} />
             </div>
             <span className="text-[10px] text-[var(--accent-amber)] font-bold whitespace-nowrap">{progress}%</span>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <span className="badge badge-green text-[9px]">● LIVE</span>
-            <Link href={`/briefing/${regionId}/${level}`} className="badge badge-gray text-[9px]">⏸</Link>
+            <SoundToggle floating={false} />
+            <Link
+              href={`/briefing/${regionId}/${level}?difficulty=${difficulty}`}
+              className="badge badge-gray text-[9px]"
+              onClick={() => play('click')}
+            >
+              ⏸
+            </Link>
           </div>
         </div>
 
@@ -322,7 +381,7 @@ export default function GameplayClient({ mission, regionId, level }: { mission: 
         <div className="flex flex-1 overflow-hidden">
 
           {/* Left: status panel */}
-          <div className="flex flex-col border-r overflow-y-auto flex-shrink-0" style={{ width: '110px', borderColor: '#1a3a2e', background: '#0d1f1a' }}>
+          <div className="flex flex-col border-r overflow-y-auto flex-shrink-0" style={{ width: '110px', borderColor: 'var(--border-card)', background: 'var(--bg-card)' }}>
             <div className="p-2 space-y-3">
               {/* Env bars */}
               <div>
@@ -336,9 +395,9 @@ export default function GameplayClient({ mission, regionId, level }: { mission: 
                   <div key={label} className="mb-2">
                     <div className="flex justify-between items-center mb-0.5">
                       <span className="text-[9px] text-[var(--text-muted)]">{emoji} {label}</span>
-                      <span className="text-[9px] font-medium text-white">{val}%</span>
+                      <span className="text-[9px] font-medium text-foreground">{val}%</span>
                     </div>
-                    <div className="h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                    <div className="h-1 rounded-full" style={{ background: 'var(--track-bg)' }}>
                       <div className="h-1 rounded-full transition-all" style={{ width: `${val}%`, background: barColor(val, inv) }} />
                     </div>
                   </div>
@@ -356,7 +415,7 @@ export default function GameplayClient({ mission, regionId, level }: { mission: 
                 ].map(({ icon, label }) => (
                   <div key={icon} className="flex justify-between text-[9px]">
                     <span>{icon}</span>
-                    <span className="text-white font-medium">{label}</span>
+                    <span className="text-foreground font-medium">{label}</span>
                   </div>
                 ))}
               </div>
@@ -369,11 +428,11 @@ export default function GameplayClient({ mission, regionId, level }: { mission: 
                     <div key={`${obj.metric}-${obj.target}`}>
                       <div className="flex items-start gap-1 mb-0.5">
                         <span className="text-[10px] flex-shrink-0 mt-0.5">{obj.done ? '✅' : '⬜'}</span>
-                        <p className="text-[8px] leading-tight" style={{ color: obj.done ? '#4ade80' : '#86efac' }}>
+                        <p className="text-[8px] leading-tight" style={{ color: obj.done ? 'var(--accent-green)' : 'var(--text-secondary)' }}>
                           {obj.label}
                         </p>
                       </div>
-                      <p className="text-[7px] pl-3.5" style={{ color: obj.done ? '#22c55e' : '#6b9e7a' }}>
+                      <p className="text-[7px] pl-3.5" style={{ color: obj.done ? 'var(--border-glow)' : 'var(--text-muted)' }}>
                         {obj.progress}
                       </p>
                     </div>
@@ -386,7 +445,7 @@ export default function GameplayClient({ mission, regionId, level }: { mission: 
                 <p className="text-[8px] text-[var(--text-muted)] uppercase tracking-widest mb-1">Log</p>
                 <div className="space-y-1">
                   {logs.slice(0, 3).map((log) => (
-                    <p key={log.id} className="text-[8px] leading-tight" style={{ color: log.type === 'alert' ? '#f87171' : log.type === 'success' ? '#4ade80' : '#6b9e7a' }}>
+                    <p key={log.id} className="text-[8px] leading-tight" style={{ color: log.type === 'alert' ? 'var(--accent-red)' : log.type === 'success' ? 'var(--accent-green)' : 'var(--text-muted)' }}>
                       {log.type === 'alert' ? '⚠' : log.type === 'success' ? '✓' : '›'} {log.message}
                     </p>
                   ))}
@@ -402,7 +461,9 @@ export default function GameplayClient({ mission, regionId, level }: { mission: 
               biodiversity={status.biodiversity}
               waterQuality={status.waterQuality}
               trees={status.trees}
+              onAction={registerMapAction}
               onTileClick={(type) => {
+                play('tile')
                 const msgs: Record<string, string> = {
                   water:    'Sungai — scan kualitas air',
                   grass:    'Area hijau — cocok untuk pohon',
@@ -416,8 +477,8 @@ export default function GameplayClient({ mission, regionId, level }: { mission: 
           </div>
 
           {/* Right: action buttons (vertical) */}
-          <div className="flex flex-col border-l overflow-y-auto flex-shrink-0" style={{ width: '72px', borderColor: '#1a3a2e', background: '#0d1f1a' }}>
-            <p className="text-[8px] text-[var(--text-muted)] uppercase tracking-widest text-center py-1.5 border-b flex-shrink-0" style={{ borderColor: '#1a3a2e' }}>Aksi</p>
+          <div className="flex flex-col border-l overflow-y-auto flex-shrink-0" style={{ width: '72px', borderColor: 'var(--border-card)', background: 'var(--bg-card)' }}>
+            <p className="text-[8px] text-[var(--text-muted)] uppercase tracking-widest text-center py-1.5 border-b flex-shrink-0" style={{ borderColor: 'var(--border-card)' }}>Aksi</p>
             <div className="flex flex-col gap-1 p-1.5 flex-1">
               {ACTIONS.map((definition) => {
                 const cost = ACTION_COSTS[definition.action]
@@ -432,20 +493,20 @@ export default function GameplayClient({ mission, regionId, level }: { mission: 
                     disabled={!enabled}
                     title={!useful ? 'Target aksi ini sudah tercapai' : !affordable ? 'Sumber daya tidak cukup' : undefined}
                     className="flex flex-col items-center justify-center rounded-lg p-1.5 text-center transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid #1e4a38', minHeight: '52px' }}
+                    style={{ background: 'var(--surface-muted)', border: '1px solid var(--border-card)', minHeight: '52px' }}
                     onMouseEnter={(e) => {
                       if (!enabled) return
-                      e.currentTarget.style.borderColor = '#22c55e'
-                      e.currentTarget.style.background = 'rgba(74,222,128,0.08)'
+                      e.currentTarget.style.borderColor = 'var(--border-glow)'
+                      e.currentTarget.style.background = 'var(--surface-selected)'
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = '#1e4a38'
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+                      e.currentTarget.style.borderColor = 'var(--border-card)'
+                      e.currentTarget.style.background = 'var(--surface-muted)'
                     }}
                   >
                     <span className="text-lg leading-none mb-0.5">{definition.emoji}</span>
-                    <span className="text-[8px] text-white font-medium leading-tight">{definition.label}</span>
-                    <span className="text-[7px] mt-0.5" style={{ color: affordable ? 'var(--text-muted)' : '#f87171' }}>{formatCost(cost)}</span>
+                    <span className="text-[8px] text-foreground font-medium leading-tight">{definition.label}</span>
+                    <span className="text-[7px] mt-0.5" style={{ color: affordable ? 'var(--text-muted)' : 'var(--accent-red)' }}>{formatCost(cost)}</span>
                   </button>
                 )
               })}

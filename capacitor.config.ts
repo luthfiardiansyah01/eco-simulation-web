@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId: 'com.ecosimulation.app',
-  appName: 'EcoSim',
+  appId: 'com.vrass.app',
+  appName: 'VRASS',
   webDir: 'out',
   server: {
     // Replace with your Vercel deployment URL after deploying

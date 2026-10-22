@@ -1,42 +1,55 @@
-import Link from 'next/link'
+import SoundLink from '@/components/audio/SoundLink'
 import { MISSIONS } from '@/data/regions'
+import {
+  DIFFICULTIES,
+  DIFFICULTY_ORDER,
+  getStartingStatus,
+  parseDifficulty,
+} from '@/lib/gameplay/difficulty'
 import { notFound } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
 export default async function BriefingPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ regionId: string; level: string }>
+  searchParams: Promise<{ difficulty?: string | string[] }>
 }) {
   const { regionId, level } = await params
+  const { difficulty: difficultyParam } = await searchParams
   const mission = MISSIONS.find((m) => m.regionId === regionId && m.level === parseInt(level))
   if (!mission) notFound()
 
+  const difficulty = parseDifficulty(difficultyParam)
+  const selectedDifficulty = DIFFICULTIES[difficulty]
+  const startingStatus = getStartingStatus(mission, difficulty)
+
   const regionMeta: Record<string, { emoji: string; color: string }> = {
-    'west-java':    { emoji: '🏔️', color: 'from-green-900/40 to-teal-900/20' },
-    'central-java': { emoji: '🌾', color: 'from-amber-900/40 to-green-900/20' },
-    'east-java':    { emoji: '🌊', color: 'from-blue-900/40 to-teal-900/20' },
+    'west-java':    { emoji: '🏔️', color: 'region-hero-green' },
+    'central-java': { emoji: '🌾', color: 'region-hero-amber' },
+    'east-java':    { emoji: '🌊', color: 'region-hero-blue' },
   }
-  const meta = regionMeta[regionId] ?? { emoji: '🌿', color: 'from-green-900/40 to-teal-900/20' }
+  const meta = regionMeta[regionId] ?? { emoji: '🌿', color: 'region-hero-green' }
 
   const objectiveIcons = ['🎯', '🔬', '🌱', '💧', '📊', '🦋']
   const rewardIcons = ['⭐', '🏆', '💎', '🔓', '🌿', '📈']
 
   return (
     <main className="min-h-screen p-6 relative overflow-hidden">
-      <div className="absolute top-[-60px] right-[-60px] w-72 h-72 rounded-full bg-green-900/15 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-[-60px] left-[-60px] w-72 h-72 rounded-full bg-teal-900/15 blur-3xl pointer-events-none" />
+      <div className="absolute top-[-60px] right-[-60px] w-72 h-72 rounded-full bg-[var(--decor-green)] blur-3xl pointer-events-none" />
+      <div className="absolute bottom-[-60px] left-[-60px] w-72 h-72 rounded-full bg-[var(--decor-teal)] blur-3xl pointer-events-none" />
 
       <div className="max-w-2xl mx-auto relative z-10">
 
         {/* Back nav */}
-        <Link href={`/mission/${regionId}`} className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)] hover:text-[var(--accent-green)] transition-colors mb-5">
+        <SoundLink href={`/mission/${regionId}`} className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)] hover:text-[var(--accent-green)] transition-colors mb-5">
           ← Kembali ke Daftar Misi
-        </Link>
+        </SoundLink>
 
         {/* Mission header */}
-        <div className={`eco-card bg-gradient-to-br ${meta.color} p-5 mb-4`}>
+        <div className={`eco-card ${meta.color} p-5 mb-4`}>
           <div className="flex items-start gap-3">
             <span className="text-4xl mt-1">{meta.emoji}</span>
             <div className="flex-1">
@@ -44,7 +57,7 @@ export default async function BriefingPage({
                 <span className="badge badge-teal">Level {mission.level}</span>
                 <span className="badge badge-amber">⭐ +{mission.researchPoints} pts</span>
               </div>
-              <h1 className="text-xl font-bold text-white mb-1">{mission.title}</h1>
+              <h1 className="text-xl font-bold text-foreground mb-1">{mission.title}</h1>
               <p className="text-xs text-[var(--text-muted)]">📍 {mission.location}</p>
             </div>
           </div>
@@ -78,7 +91,7 @@ export default async function BriefingPage({
         </div>
 
         {/* Rewards */}
-        <div className="eco-card p-5 mb-6">
+        <div className="eco-card p-5 mb-4">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-lg">🏆</span>
             <h2 className="text-sm font-semibold text-[var(--accent-amber)] tracking-wide uppercase">Hadiah</h2>
@@ -93,18 +106,105 @@ export default async function BriefingPage({
           </ul>
         </div>
 
+        {/* Difficulty */}
+        <div className="eco-card p-5 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-lg">⚙️</span>
+            <h2 className="text-sm font-semibold text-[var(--accent-teal)] tracking-wide uppercase">Tingkat Kesulitan</h2>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-3" role="group" aria-label="Tingkat kesulitan">
+            {DIFFICULTY_ORDER.map((id) => {
+              const option = DIFFICULTIES[id]
+              const active = id === difficulty
+
+              return (
+                <SoundLink
+                  key={id}
+                  href={`/briefing/${regionId}/${level}?difficulty=${id}`}
+                  scroll={false}
+                  aria-current={active ? 'true' : undefined}
+                  className="rounded-xl border p-3 transition-all"
+                  style={{
+                    borderColor: active ? option.accent : 'var(--border-card)',
+                    background: active ? 'var(--surface-selected)' : 'var(--surface-muted)',
+                    boxShadow: active ? `0 0 0 1px ${option.accent}` : undefined,
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-base">{option.emoji}</span>
+                    {active && (
+                      <span className="text-[8px] font-bold tracking-wide" style={{ color: option.accent }}>
+                        DIPILIH
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs font-semibold text-foreground">{option.label}</p>
+                  <p className="text-[10px] text-[var(--text-muted)] leading-tight mt-0.5">
+                    {option.tagline}
+                  </p>
+                </SoundLink>
+              )
+            })}
+          </div>
+
+          <div
+            className="mt-3 rounded-lg p-3"
+            style={{ background: 'var(--surface-muted)', border: '1px solid var(--border-card)' }}
+          >
+            <div className="flex items-start gap-2">
+              <span className="text-sm">{selectedDifficulty.emoji}</span>
+              <div>
+                <p className="text-[11px] font-semibold text-foreground">
+                  Mode {selectedDifficulty.label}
+                </p>
+                <p className="text-[10px] text-[var(--text-muted)] leading-tight mt-0.5">
+                  {selectedDifficulty.description}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-1 mt-2.5 text-[10px]">
+              {[
+                ['☁️ Polusi', `${startingStatus.pollution}%`],
+                ['🦋 Bio', `${startingStatus.biodiversity}%`],
+                ['💧 Air', `${startingStatus.waterQuality}%`],
+                ['🐟 Ikan', `${startingStatus.fishPopulation}%`],
+                ['🌳 Pohon', `${startingStatus.trees}`],
+                ['🚁 Drone', `${startingStatus.drones}`],
+                ['💰 Kredit', startingStatus.credits.toLocaleString('id-ID')],
+                ['⚡ Energi', `${startingStatus.energy}`],
+              ].map(([label, value]) => (
+                <div key={label} className="flex items-center justify-between gap-2">
+                  <span className="text-[var(--text-muted)]">{label}</span>
+                  <span className="font-medium text-foreground">{value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <p className="text-[10px] text-[var(--text-muted)] mt-2">
+            Kesulitan hanya memengaruhi kondisi awal dan sumber daya. Objektif dan hadiah tetap sama.
+          </p>
+        </div>
+
         {/* Action buttons */}
         <div className="flex gap-3">
-          <Link href={`/mission/${regionId}`} className="flex-1">
+          <SoundLink href={`/mission/${regionId}`} className="flex-1">
             <button className="eco-btn-secondary w-full py-3 text-sm">
               ← Kembali
             </button>
-          </Link>
-          <Link href={`/play/${regionId}/${level}`} className="flex-2 w-full" style={{ flex: 2 }}>
+          </SoundLink>
+          <SoundLink
+            href={`/play/${regionId}/${level}?difficulty=${difficulty}`}
+            className="flex-2 w-full"
+            style={{ flex: 2 }}
+            sound="start"
+          >
             <button className="eco-btn-primary w-full py-3 text-sm">
               ▶ Mulai Simulasi
             </button>
-          </Link>
+          </SoundLink>
         </div>
       </div>
     </main>

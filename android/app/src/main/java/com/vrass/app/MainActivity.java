@@ -1,4 +1,4 @@
-package com.ecosimulation.app;
+package com.vrass.app;
 
 import android.content.pm.ActivityInfo;
 import android.os.Bundle;

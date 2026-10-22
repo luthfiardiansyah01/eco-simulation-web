@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import SoundLink from '@/components/audio/SoundLink'
 import Image from 'next/image'
 import { REGIONS, MISSION_LEVELS } from '@/data/regions'
 import { getAllProgressServer } from '@/lib/supabase/progress-server'
@@ -24,19 +24,19 @@ export default async function RegionPage() {
 
   return (
     <main className="min-h-screen p-6 relative overflow-hidden">
-      <div className="absolute top-[-60px] right-[-60px] w-72 h-72 rounded-full bg-green-900/15 blur-3xl pointer-events-none" />
+      <div className="absolute top-[-60px] right-[-60px] w-72 h-72 rounded-full bg-[var(--decor-green)] blur-3xl pointer-events-none" />
 
       <div className="max-w-5xl mx-auto relative z-10">
 
         {/* Header */}
         <div className="mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)] hover:text-[var(--accent-green)] transition-colors mb-5">
+          <SoundLink href="/" className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)] hover:text-[var(--accent-green)] transition-colors mb-5">
             ← Kembali ke Menu
-          </Link>
+          </SoundLink>
           <div className="flex items-center gap-3">
             <span className="text-3xl">🗺️</span>
             <div>
-              <h1 className="text-2xl font-bold text-white">Adventure Mode</h1>
+              <h1 className="text-2xl font-bold text-foreground">Adventure Mode</h1>
               <p className="text-xs text-[var(--text-muted)]">Pilih wilayah untuk memulai misi</p>
             </div>
           </div>
@@ -74,7 +74,7 @@ export default async function RegionPage() {
                       <div className="locked-overlay absolute inset-0 flex items-center justify-center">
                         <div className="text-center">
                           <div className="text-3xl mb-1">🔒</div>
-                          <p className="text-xs text-gray-400">Selesaikan region sebelumnya</p>
+                          <p className="text-xs text-[var(--text-muted)]">Selesaikan region sebelumnya</p>
                         </div>
                       </div>
                     )}
@@ -91,7 +91,7 @@ export default async function RegionPage() {
                   <div className="p-4 flex flex-col flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xl">{emoji}</span>
-                      <h3 className="font-bold text-white text-base">{region.name}</h3>
+                      <h3 className="font-bold text-foreground text-base">{region.name}</h3>
                     </div>
                     <p className="text-xs text-[var(--text-muted)] mb-3">{region.location}</p>
 
@@ -121,11 +121,11 @@ export default async function RegionPage() {
                         🔒 Terkunci
                       </button>
                     ) : (
-                      <Link href={`/mission/${region.id}`} className="block">
+                      <SoundLink href={`/mission/${region.id}`} className="block" sound="start">
                         <button className="eco-btn-primary w-full py-2.5 text-sm">
                           {region.completionPct > 0 ? '▶ Lanjutkan' : '▶ Mulai'}
                         </button>
-                      </Link>
+                      </SoundLink>
                     )}
                   </div>
                 </div>
@@ -138,7 +138,7 @@ export default async function RegionPage() {
         <div className="mt-8 eco-card p-4 flex items-center gap-3">
           <span className="text-2xl">💡</span>
           <div>
-            <p className="text-sm text-white font-medium">Tips</p>
+            <p className="text-sm text-foreground font-medium">Tips</p>
             <p className="text-xs text-[var(--text-muted)]">Selesaikan semua misi di West Java untuk membuka Central Java. Kumpulkan XP sebanyak mungkin!</p>
           </div>
         </div>

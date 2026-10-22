@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSound } from '@/components/audio/SoundProvider'
 
 const STEPS = [
   {
@@ -63,9 +64,9 @@ const STEPS = [
 
 const HIGHLIGHT_IMGS: Record<string, React.ReactNode> = {
   adventure: (
-    <div className="rounded-xl p-3 text-center text-xs" style={{ background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(74,222,128,0.3)' }}>
+    <div className="rounded-xl p-3 text-center text-xs" style={{ background: 'var(--surface-selected)', border: '1px solid var(--border-glow)' }}>
       <div className="text-2xl mb-1">🗺️</div>
-      <div className="font-bold text-white">Adventure Mode</div>
+      <div className="font-bold text-foreground">Adventure Mode</div>
       <div className="text-[var(--text-muted)] mt-0.5">3 Wilayah · Dinamis</div>
       <div className="mt-2 py-1 rounded-lg text-xs font-semibold text-white" style={{ background: 'linear-gradient(135deg,#16a34a,#0d9488)' }}>▶ Mulai Petualangan</div>
     </div>
@@ -77,16 +78,16 @@ const HIGHLIGHT_IMGS: Record<string, React.ReactNode> = {
         { name: 'Semarang', emoji: '⛵', color: '#6b7280', unlocked: false },
         { name: 'Surabaya', emoji: '🦈', color: '#6b7280', unlocked: false },
       ].map((r) => (
-        <div key={r.name} className="flex-1 rounded-lg p-2 text-center text-[10px]" style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${r.unlocked ? '#22c55e' : '#1e4a38'}` }}>
+        <div key={r.name} className="flex-1 rounded-lg p-2 text-center text-[10px]" style={{ background: 'var(--surface-muted)', border: `1px solid ${r.unlocked ? 'var(--border-glow)' : 'var(--border-card)'}` }}>
           <div className="text-xl mb-0.5">{r.emoji}</div>
-          <div className="font-semibold text-white leading-tight">{r.name}</div>
-          {!r.unlocked && <div className="text-[8px] mt-1 text-[#6b7280]">🔒 Terkunci</div>}
+          <div className="font-semibold text-foreground leading-tight">{r.name}</div>
+          {!r.unlocked && <div className="text-[8px] mt-1 text-[var(--text-muted)]">🔒 Terkunci</div>}
         </div>
       ))}
     </div>
   ),
   briefing: (
-    <div className="rounded-xl p-3 text-xs" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid #1e4a38' }}>
+    <div className="rounded-xl p-3 text-xs" style={{ background: 'var(--surface-muted)', border: '1px solid var(--border-card)' }}>
       <div className="font-bold text-[var(--accent-amber)] mb-1.5">🎯 Objektif Misi</div>
       <div className="space-y-1">
         {['Kurangi polusi ≤20%', 'Pulihkan populasi ikan ≥60%', 'Tanam 50 pohon'].map((o) => (
@@ -98,7 +99,7 @@ const HIGHLIGHT_IMGS: Record<string, React.ReactNode> = {
     </div>
   ),
   status: (
-    <div className="rounded-xl p-3 text-[9px]" style={{ background: '#0d1f1a', border: '1px solid #1e4a38', width: '100px' }}>
+    <div className="rounded-xl p-3 text-[9px]" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-card)', width: '100px' }}>
       {[
         { emoji: '☁️', label: 'Polusi', val: 78, inv: true },
         { emoji: '🦋', label: 'Bio', val: 22, inv: false },
@@ -111,9 +112,9 @@ const HIGHLIGHT_IMGS: Record<string, React.ReactNode> = {
           <div key={label} className="mb-2">
             <div className="flex justify-between mb-0.5">
               <span>{emoji} {label}</span>
-              <span className="font-medium text-white">{val}%</span>
+              <span className="font-medium text-foreground">{val}%</span>
             </div>
-            <div className="h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
+            <div className="h-1 rounded-full" style={{ background: 'var(--track-bg)' }}>
               <div className="h-1 rounded-full" style={{ width: `${val}%`, background: c }} />
             </div>
           </div>
@@ -122,8 +123,8 @@ const HIGHLIGHT_IMGS: Record<string, React.ReactNode> = {
     </div>
   ),
   map: (
-    <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #1e4a38' }}>
-      <div className="grid grid-cols-8 gap-px p-2" style={{ background: '#0a1a14' }}>
+    <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border-card)' }}>
+      <div className="grid grid-cols-8 gap-px p-2" style={{ background: 'var(--bg-card-2)' }}>
         {Array.from({ length: 32 }).map((_, i) => {
           const types = ['water', 'grass', 'tree', 'polluted', 'dirt']
           const t = types[i % 5]
@@ -147,9 +148,9 @@ const HIGHLIGHT_IMGS: Record<string, React.ReactNode> = {
         { emoji: '💧', label: 'Filter', cost: '-150💰' },
         { emoji: '🚁', label: 'Drone', cost: '-30⚡' },
       ].map((a) => (
-        <div key={a.label} className="flex flex-col items-center rounded-lg p-1.5 text-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid #1e4a38' }}>
+        <div key={a.label} className="flex flex-col items-center rounded-lg p-1.5 text-center" style={{ background: 'var(--surface-muted)', border: '1px solid var(--border-card)' }}>
           <span className="text-lg mb-0.5">{a.emoji}</span>
-          <span className="text-[8px] text-white font-medium">{a.label}</span>
+          <span className="text-[8px] text-foreground font-medium">{a.label}</span>
           <span className="text-[7px] text-[var(--text-muted)]">{a.cost}</span>
         </div>
       ))}
@@ -163,6 +164,7 @@ interface Props {
 }
 
 export default function OnboardingTutorial({ forceOpen, onClose }: Props = {}) {
+  const { play } = useSound()
   const [visible, setVisible] = useState(false)
   const [step, setStep] = useState(0)
 
@@ -184,18 +186,26 @@ export default function OnboardingTutorial({ forceOpen, onClose }: Props = {}) {
   }, [forceOpen])
 
   function finish() {
+    play('start')
     try { localStorage.setItem('ecosim_onboarding_done', '1') } catch { /* ignore */ }
     setVisible(false)
     onClose?.()
   }
 
   function next() {
-    if (step < STEPS.length - 1) setStep((s) => s + 1)
-    else finish()
+    if (step < STEPS.length - 1) {
+      play('click')
+      setStep((s) => s + 1)
+    } else {
+      finish()
+    }
   }
 
   function prev() {
-    if (step > 0) setStep((s) => s - 1)
+    if (step > 0) {
+      play('click')
+      setStep((s) => s - 1)
+    }
   }
 
   if (!visible) return null
@@ -206,14 +216,14 @@ export default function OnboardingTutorial({ forceOpen, onClose }: Props = {}) {
   return (
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(6px)' }}
+      style={{ background: 'var(--overlay-backdrop)', backdropFilter: 'blur(6px)' }}
     >
       <div
         className="relative w-full max-w-sm rounded-2xl overflow-hidden"
         style={{
-          background: 'linear-gradient(135deg, #132b23 0%, #0f2219 100%)',
-          border: '1px solid #1e4a38',
-          boxShadow: '0 0 40px rgba(74,222,128,0.15)',
+          background: 'linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-2) 100%)',
+          border: '1px solid var(--border-card)',
+          boxShadow: 'var(--glow-green)',
         }}
       >
         {/* Progress dots */}
@@ -221,12 +231,16 @@ export default function OnboardingTutorial({ forceOpen, onClose }: Props = {}) {
           {STEPS.map((_, i) => (
             <button
               key={i}
-              onClick={() => setStep(i)}
+              onClick={() => {
+                play('click')
+                setStep(i)
+              }}
               className="rounded-full transition-all"
               style={{
                 width: i === step ? 20 : 6,
                 height: 6,
-                background: i === step ? '#4ade80' : i < step ? '#22c55e66' : 'rgba(255,255,255,0.15)',
+                background: i === step ? 'var(--accent-green)' : i < step ? 'var(--accent-green)' : 'var(--track-bg)',
+                opacity: i < step ? 0.4 : 1,
               }}
             />
           ))}
@@ -247,7 +261,7 @@ export default function OnboardingTutorial({ forceOpen, onClose }: Props = {}) {
           </div>
 
           {/* Title */}
-          <h2 className="text-lg font-bold text-center text-white mb-2">{current.title}</h2>
+          <h2 className="text-lg font-bold text-center text-foreground mb-2">{current.title}</h2>
 
           {/* Description */}
           <p className="text-sm text-[var(--text-muted)] text-center leading-relaxed mb-4 whitespace-pre-line">
@@ -265,7 +279,7 @@ export default function OnboardingTutorial({ forceOpen, onClose }: Props = {}) {
           {current.tip && (
             <div
               className="rounded-xl px-3 py-2 text-xs text-center mb-4"
-              style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', color: '#fbbf24' }}
+              style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', color: 'var(--accent-amber)' }}
             >
               {current.tip}
             </div>

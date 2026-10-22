@@ -4,8 +4,11 @@ import Link from 'next/link'
 import AuthButton from '@/components/layout/AuthButton'
 import { useState } from 'react'
 import OnboardingTutorial from '@/components/ui/OnboardingTutorial'
+import SoundLink from '@/components/audio/SoundLink'
+import { useSound } from '@/components/audio/SoundProvider'
 
 export default function Home() {
+  const { play } = useSound()
   const [showTutorial, setShowTutorial] = useState(false)
 
   // Auto-show on first ever visit (checked client-side only)
@@ -16,8 +19,8 @@ export default function Home() {
     <main className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
 
       {/* Decorative background circles */}
-      <div className="absolute top-[-80px] left-[-80px] w-64 h-64 rounded-full bg-green-900/20 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-[-80px] right-[-80px] w-64 h-64 rounded-full bg-teal-900/20 blur-3xl pointer-events-none" />
+      <div className="absolute top-[-80px] left-[-80px] w-64 h-64 rounded-full bg-[var(--decor-green)] blur-3xl pointer-events-none" />
+      <div className="absolute bottom-[-80px] right-[-80px] w-64 h-64 rounded-full bg-[var(--decor-teal)] blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-2xl relative z-10">
 
@@ -46,13 +49,13 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
           {/* Adventure Mode */}
-          <Link href="/region" className="block">
+          <Link href="/region" className="block" onClick={() => play('start')}>
             <div className="eco-card p-6 cursor-pointer h-full flex flex-col glow-pulse">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-2xl">🗺️</span>
                 <span className="badge badge-red">HARD</span>
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Adventure Mode</h3>
+              <h3 className="text-lg font-bold text-foreground mb-2">Adventure Mode</h3>
               <p className="text-sm text-[var(--text-muted)] mb-4 flex-1">
                 Selesaikan misi pemulihan ekosistem sungai di 3 wilayah Jawa dengan tantangan lingkungan dinamis.
               </p>
@@ -63,7 +66,7 @@ export default function Home() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[var(--text-muted)]">Iklim</span>
-                  <span className="text-white">Dinamis</span>
+                  <span className="text-foreground">Dinamis</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[var(--text-muted)]">Wilayah</span>
@@ -82,7 +85,7 @@ export default function Home() {
               <span className="text-2xl">🏕️</span>
               <span className="badge badge-green">RELAXED</span>
             </div>
-            <h3 className="text-lg font-bold text-white mb-2">Classic Free Roam</h3>
+            <h3 className="text-lg font-bold text-foreground mb-2">Classic Free Roam</h3>
             <p className="text-sm text-[var(--text-muted)] mb-4 flex-1">
               Jelajahi ekosistem secara bebas tanpa objektif. Kreasi sebebasnya seperti sandbox.
             </p>
@@ -93,7 +96,7 @@ export default function Home() {
               </div>
               <div className="flex justify-between">
                 <span className="text-[var(--text-muted)]">Iklim</span>
-                <span className="text-white">Manual</span>
+                <span className="text-foreground">Manual</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[var(--text-muted)]">Wilayah</span>
@@ -107,16 +110,33 @@ export default function Home() {
         </div>
 
         {/* Footer hint */}
-        <div className="flex items-center justify-between mt-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-8 gap-3">
           <p className="text-xs text-[var(--text-muted)]">
             Selamatkan ekosistem sungai Jawa 🌱
           </p>
-          <button
-            onClick={() => setShowTutorial(true)}
-            className="badge badge-teal text-[10px] cursor-pointer hover:opacity-80 transition-opacity"
-          >
-            ❓ Tutorial
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <SoundLink
+              href="/leaderboard"
+              className="badge badge-amber text-[10px] hover:opacity-80 transition-opacity"
+            >
+              🏆 Leaderboard
+            </SoundLink>
+            <SoundLink
+              href="/settings"
+              className="badge badge-gray text-[10px] hover:opacity-80 transition-opacity"
+            >
+              ⚙️ Pengaturan
+            </SoundLink>
+            <button
+              onClick={() => {
+                play('click')
+                setShowTutorial(true)
+              }}
+              className="badge badge-teal text-[10px] cursor-pointer hover:opacity-80 transition-opacity"
+            >
+              ❓ Tutorial
+            </button>
+          </div>
         </div>
       </div>
 

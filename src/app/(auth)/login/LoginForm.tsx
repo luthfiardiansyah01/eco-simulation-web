@@ -4,22 +4,27 @@ import { useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useSound } from '@/components/audio/SoundProvider'
 
 export default function LoginForm({
   initialError = '',
+  initialMessage = '',
 }: {
   initialError?: string
+  initialMessage?: string
 }) {
   const router = useRouter()
+  const { play } = useSound()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
   const [error, setError] = useState(initialError)
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState(initialMessage)
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    play('click')
     setError('')
     setMessage('')
     setLoading(true)
@@ -38,6 +43,7 @@ export default function LoginForm({
 
         if (signUpError) {
           setError(signUpError.message)
+          play('error')
           return
         }
 
@@ -48,6 +54,7 @@ export default function LoginForm({
             'Akun dibuat. Cek email kamu dan klik tautan konfirmasi untuk mulai bermain.'
           )
           setIsSignUp(false)
+          play('success')
           return
         }
       } else {
@@ -58,21 +65,25 @@ export default function LoginForm({
 
         if (signInError) {
           setError(signInError.message)
+          play('error')
           return
         }
       }
 
+      play('success')
       router.push('/')
       router.refresh()
     } catch (err) {
       console.error('Auth request failed:', err)
       setError('Terjadi kesalahan. Coba lagi.')
+      play('error')
     } finally {
       setLoading(false)
     }
   }
 
   function toggleMode() {
+    play('click')
     setIsSignUp((current) => !current)
     setError('')
     setMessage('')
@@ -107,13 +118,24 @@ export default function LoginForm({
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
-                className="w-full bg-black/20 border border-[var(--border-card)] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[var(--accent-green)] focus:ring-1 focus:ring-green-500/20 transition-colors placeholder-gray-600"
+                className="w-full bg-[var(--input-bg)] border border-[var(--border-card)] rounded-lg px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-[var(--accent-green)] focus:ring-1 focus:ring-green-500/20 transition-colors placeholder:text-[var(--text-muted)]"
                 placeholder="kamu@email.com"
               />
             </div>
 
             <div>
-              <label className="text-xs text-[var(--text-muted)] block mb-1.5 font-medium">Password</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs text-[var(--text-muted)] font-medium">Password</label>
+                {!isSignUp && (
+                  <Link
+                    href="/forgot-password"
+                    onClick={() => play('click')}
+                    className="text-[10px] text-[var(--accent-teal)] hover:underline"
+                  >
+                    Lupa password?
+                  </Link>
+                )}
+              </div>
               <input
                 type="password"
                 value={password}
@@ -121,7 +143,7 @@ export default function LoginForm({
                 required
                 minLength={6}
                 autoComplete={isSignUp ? 'new-password' : 'current-password'}
-                className="w-full bg-black/20 border border-[var(--border-card)] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[var(--accent-green)] focus:ring-1 focus:ring-green-500/20 transition-colors placeholder-gray-600"
+                className="w-full bg-[var(--input-bg)] border border-[var(--border-card)] rounded-lg px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-[var(--accent-green)] focus:ring-1 focus:ring-green-500/20 transition-colors placeholder:text-[var(--text-muted)]"
                 placeholder="••••••••"
               />
             </div>
@@ -168,7 +190,7 @@ export default function LoginForm({
         </div>
 
         <div className="text-center mt-4">
-          <Link href="/" className="text-xs text-[var(--text-muted)] hover:text-white transition-colors">
+          <Link href="/" className="text-xs text-[var(--text-muted)] hover:text-foreground transition-colors" onClick={() => play('click')}>
             ← Kembali sebagai tamu
           </Link>
         </div>

@@ -94,3 +94,13 @@ export type UserAchievement = {
   achievementId: string
   unlockedAt: string
 }
+
+export type LeaderboardEntry = {
+  rank: number
+  username: string
+  totalPoints: number
+  missionsCompleted: number
+  achievementsCount: number
+  regionsCount: number
+  isCurrentUser: boolean
+}

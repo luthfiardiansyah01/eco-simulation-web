@@ -2,7 +2,7 @@
 
 EcoSim is a browser-based environmental simulation game built with Next.js. Players restore river ecosystems across West Java, Central Java, and East Java through mission-based gameplay, research points, and achievements.
 
-The app works as a guest, and signing in with Supabase adds persistent progress and achievement tracking. It is also installable as a PWA and ships with an Android shell via Capacitor.
+The app works as a guest, and signing in with Supabase adds persistent progress, achievement tracking, and a place on the single-player leaderboard. Gameplay is online-only: missions and progress require a network connection. The app is also installable as a PWA and ships with an Android shell via Capacitor; offline mode is a fallback screen, not an offline game.
 
 ## Tech stack
 
@@ -12,6 +12,7 @@ The app works as a guest, and signing in with Supabase adds persistent progress 
 - **Phaser 4** — gameplay simulation
 - **Supabase** — authentication, Postgres, RLS, and mission progress RPC
 - **Framer Motion** — UI transitions
+- **Web Audio API** — synthesized UI/gameplay effects and nature ambience
 - **Capacitor 8** — Android wrapper
 - **Native service worker** — offline fallback and static-asset caching
 
@@ -58,24 +59,64 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Supabase setup
 
-The database schema, migrations, RLS policies, achievements seed data, and the `complete_mission` RPC live in [`supabase/`](./supabase).
+The database schema, migrations, RLS policies, achievements seed data, mission completion RPC, and public leaderboard RPC live in [`supabase/`](./supabase).
 
 Follow [`supabase/README.md`](./supabase/README.md) for the full setup. At a minimum:
 
 1. Apply `supabase/schema.sql` to a fresh project, or run the migrations in `supabase/migrations/` in filename order.
 2. Set **Authentication → URL Configuration**:
    - **Site URL:** your production origin
-   - **Redirect URLs:** `/auth/callback` and `/auth/confirm` for production and local development
-3. Update the **Confirm signup** email template to use `/auth/confirm` with `{{ .TokenHash }}`. The default Supabase link uses a URL fragment that server-side route handlers cannot read. The required template is documented in `supabase/README.md`.
+   - **Redirect URLs:** `/auth/callback`, `/auth/confirm`, and `/auth/recovery` for production and local development
+3. Update the **Confirm signup** and **Reset Password** email templates. The confirmation template uses `/auth/confirm` with `{{ .TokenHash }}`; the recovery template adds `{{ .Token }}` for the 6-digit code and links to `/auth/recovery`. Both templates are documented in `supabase/README.md`.
 
 ## Authentication flow
 
 - `/login` — sign up, sign in, and resend confirmation email
+- `/forgot-password` — requests a 6-digit recovery code by email and verifies it
+- `/reset-password` — sets a new password for a verified recovery session
+- `/auth/recovery` — processes recovery links (`token_hash`, PKCE `code`, or fragment tokens) and redirects to `/reset-password`
 - `/auth/callback` — exchanges OAuth/PKCE codes for a session
-- `/auth/confirm` — verifies email confirmation `token_hash` links
+- `/auth/confirm` — verifies email confirmation links
 - `src/proxy.ts` — refreshes the Supabase session on navigation using `getClaims()` and keeps guest pages available if Supabase is unreachable
 
-Email confirmation requires working email delivery. Configure **custom SMTP** in Supabase before editing the confirmation template; the default template cannot be customized until SMTP is set up.
+Email confirmation and password recovery require working email delivery. Configure **custom SMTP** in Supabase before editing the templates; the default template cannot be customized until SMTP is set up. The required **Confirm signup** and **Reset Password** templates are documented in [`supabase/README.md`](./supabase/README.md).
+
+## Sound effects and ambience
+
+The app uses a small Web Audio synth instead of bundled audio files. UI clicks, navigation, mission actions, errors, objective feedback, mission completion, and achievements are generated at runtime, so they add no audio cache weight. Gameplay also gets a procedural nature ambience: a soft pad, river, wind, and occasional bird calls.
+
+- `src/lib/audio/sound-engine.ts` generates tones, filtered noise, and the gameplay ambience.
+- `src/components/audio/SoundProvider.tsx` unlocks audio on the first user gesture and persists the mute preference in `localStorage`.
+- `src/components/audio/SoundToggle.tsx` adds a mute button to the top-right of every page; gameplay has its own toggle in the top bar.
+
+No third-party samples or copyrighted recordings are used; the ambience is synthesized entirely with oscillators, noise buffers, and filters. Sound starts only after the first click or keypress, as required by browser autoplay policies. The preference is stored under `ecosim_sound_muted`.
+
+## Difficulty
+
+The mission briefing lets players choose **Easy**, **Normal**, or **Hard** before starting. Difficulty changes the starting environment and resources only; mission objectives and rewards stay the same.
+
+- **Easy:** cleaner air and water, healthier biodiversity and fish, extra trees, credits, energy, and one drone.
+- **Normal:** the standard starting conditions and mission resources.
+- **Hard:** higher pollution, weaker biodiversity and water quality, fewer trees and drones, and tighter credits/energy.
+
+The choice is carried in the `difficulty` query parameter, so refreshing gameplay keeps it, and the pause link returns to the briefing with the same difficulty selected. Presets live in `src/lib/gameplay/difficulty.ts`.
+
+## Settings
+
+`/settings` provides local, per-device preferences:
+
+- **Appearance:** dark or light theme; defaults to dark and applies across the app. An inline boot script applies the saved theme before paint to avoid a flash. The isometric gameplay map keeps its dark game palette.
+- **Volume:** controls sound effects and gameplay ambience.
+- **Language:** Bahasa Indonesia or English; the Settings page updates immediately and `document.lang` follows the selection.
+- **Notifications:** enables or disables in-app achievement notifications.
+
+Preferences are stored in `localStorage` under `ecosim_volume`, `ecosim_theme`, `ecosim_language`, and `ecosim_notifications`. The Settings page is reachable from the home footer and the PWA app shortcut.
+
+## Leaderboard
+
+`/leaderboard` is a public single-player ranking for registered players. Players are ordered by total research points across all regions, then by completed missions, achievements, and active regions. Guests can view the board; signing in saves progress and adds the player to the ranking.
+
+Rankings are read through the `get_leaderboard(p_limit)` RPC in `supabase/migrations/20261022000000_leaderboard.sql`. The function uses `security definer` so guests do not need direct access to `profiles` or `user_progress`, and it only returns a username plus aggregate counts. Direct writes to `user_progress` are revoked; progress is written only by the server-side `complete_mission` RPC. The page is linked from the home footer, the profile page, and the PWA shortcut menu.
 
 ## Available scripts
 
@@ -86,7 +127,9 @@ Email confirmation requires working email delivery. Configure **custom SMTP** in
 | `npm start` | Serve the production build |
 | `npm run lint` | Run ESLint |
 
-## PWA and offline behavior
+## PWA and network behavior
+
+Gameplay is intentionally online-only. The PWA makes the app installable and gives offline users a useful fallback screen, but it does not cache mission pages or run the game offline.
 
 The PWA setup is intentionally framework-native so it works with Next.js 16's default Turbopack build:
 
@@ -96,6 +139,7 @@ The PWA setup is intentionally framework-native so it works with Next.js 16's de
   - **Navigation:** network-first, with `/offline.html` as the offline fallback.
   - **Hashed Next.js assets, icons, and images:** stale-while-revalidate.
   - **Auth routes and cross-origin Supabase requests:** not intercepted.
+  - **Mission pages and mission state:** never cached; they require the network.
 
 To test the installed experience:
 
@@ -121,9 +165,11 @@ src/
     mission/           Mission briefing
     play/              Phaser gameplay
     profile/           Achievements and profile
-  components/          Layout, gameplay, UI, and PWA components
+    leaderboard/       Public single-player ranking
+    settings/          Appearance, audio, language, and notification preferences
+  components/          Layout, gameplay, audio, UI, and PWA components
   data/                Regions, missions, and level definitions
-  lib/                 Supabase clients, progress, gameplay, and helpers
+  lib/                 Supabase clients, progress, gameplay, audio, and helpers
   proxy.ts             Next.js 16 session-refresh proxy
 public/
   icons/               PWA icons (72–512 px)
@@ -141,7 +187,7 @@ The project is designed for Vercel:
 1. Import the repository into Vercel.
 2. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to the project's environment variables for Production (and Preview if used).
 3. Redeploy after changing environment variables or auth redirect settings.
-4. Add the production `/auth/callback` and `/auth/confirm` URLs to Supabase's **Redirect URLs**.
+4. Add the production `/auth/callback`, `/auth/confirm`, and `/auth/recovery` URLs to Supabase's **Redirect URLs**.
 
 Do not expose the Supabase service-role key in any `NEXT_PUBLIC_*` variable.
 
@@ -152,7 +198,11 @@ The Android shell is configured in `capacitor.config.ts` and loads the deployed 
 ## Troubleshooting
 
 - **Not signed in after email confirmation:** confirm the email template points to `/auth/confirm` with `token_hash`, and that the route is listed in Supabase Redirect URLs.
+- **Password recovery code is not received:** configure custom SMTP and add `{{ .Token }}` to the **Reset Password** template, as shown in [`supabase/README.md`](./supabase/README.md).
+- **Password reset link is invalid:** confirm the **Reset Password** template sends `token_hash` and `type=recovery` to `/auth/recovery`, and that `/auth/recovery` is listed in Supabase Redirect URLs.
 - **Session disappears after navigation:** check the Supabase environment variables in the deployment and redeploy.
 - **PWA is not installable:** use HTTPS (or localhost), verify the manifest and icons in DevTools, and test against a production build.
+- **The game does not work offline:** this is expected. Offline mode only serves the fallback page; missions and progress require a connection.
 - **Old UI still appears after deploy:** clear site data or bump `CACHE_NAME` in `public/sw.js`.
 - **Mission progress is not saved:** sign in and verify the `complete_mission` RPC migration has been applied.
+- **Leaderboard says it is unavailable:** apply `supabase/migrations/20261022000000_leaderboard.sql` in the Supabase SQL editor or with `supabase db push`.

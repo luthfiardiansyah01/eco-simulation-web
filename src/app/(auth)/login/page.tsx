@@ -5,15 +5,26 @@ const ERROR_MESSAGES: Record<string, string> = {
     'Konfirmasi email gagal atau tautan sudah kedaluwarsa. Coba masuk lagi atau kirim ulang email konfirmasi.',
 }
 
+const STATUS_MESSAGES: Record<string, string> = {
+  password_updated: 'Password berhasil diperbarui. Masuk dengan password baru.',
+}
+
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; message?: string }>
 }) {
-  const { error } = await searchParams
+  const { error, message } = await searchParams
   const initialError = error
     ? ERROR_MESSAGES[error] ?? 'Terjadi kesalahan autentikasi.'
     : ''
+  const initialMessage = message ? STATUS_MESSAGES[message] ?? '' : ''
 
-  return <LoginForm key={initialError} initialError={initialError} />
+  return (
+    <LoginForm
+      key={`${initialError}-${initialMessage}`}
+      initialError={initialError}
+      initialMessage={initialMessage}
+    />
+  )
 }

@@ -6,12 +6,13 @@
  * server output and must not be served stale while Supabase is reachable.
  */
 
-const CACHE_NAME = 'ecosim-static-v1'
+const CACHE_NAME = 'ecosim-static-v4'
 const OFFLINE_URL = '/offline.html'
 
 const PRECACHE_URLS = [
   OFFLINE_URL,
   '/manifest.json',
+  '/favicon.ico',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
 ]

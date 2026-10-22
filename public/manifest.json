@@ -10,8 +10,8 @@
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
   "orientation": "any",
-  "background_color": "#3a3f5c",
-  "theme_color": "#3a3f5c",
+  "background_color": "#0d1f1a",
+  "theme_color": "#0d1f1a",
   "categories": ["education", "games"],
   "prefer_related_applications": false,
   "icons": [
@@ -74,6 +74,28 @@
       "name": "Profile",
       "short_name": "Profile",
       "url": "/profile",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Leaderboard",
+      "short_name": "Ranking",
+      "url": "/leaderboard",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Settings",
+      "short_name": "Settings",
+      "url": "/settings",
       "icons": [
         {
           "src": "/icons/icon-192x192.png",

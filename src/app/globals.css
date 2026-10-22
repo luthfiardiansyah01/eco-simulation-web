@@ -1,9 +1,12 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: dark;
+
   --background: #0d1f1a;
   --foreground: #e8f5e9;
   --bg-card: #132b23;
+  --bg-card-2: #0f2219;
   --bg-card-hover: #1a3a2e;
   --accent-green: #4ade80;
   --accent-teal: #2dd4bf;
@@ -15,6 +18,71 @@
   --border-glow: #22c55e;
   --glow-green: 0 0 20px rgba(74, 222, 128, 0.15);
   --glow-teal: 0 0 20px rgba(45, 212, 191, 0.15);
+
+  --surface-muted: rgba(255, 255, 255, 0.04);
+  --surface-selected: rgba(74, 222, 128, 0.1);
+  --input-bg: rgba(0, 0, 0, 0.2);
+  --track-bg: rgba(255, 255, 255, 0.06);
+  --switch-off: #374151;
+  --skeleton-base: rgba(255, 255, 255, 0.04);
+  --skeleton-highlight: rgba(255, 255, 255, 0.08);
+  --overlay-backdrop: rgba(0, 0, 0, 0.88);
+  --locked-overlay: rgba(13, 31, 26, 0.7);
+  --map-bg: #0a1a14;
+
+  --decor-green: rgba(20, 83, 45, 0.2);
+  --decor-teal: rgba(19, 78, 74, 0.2);
+  --body-glow-green: rgba(34, 197, 94, 0.06);
+  --body-glow-teal: rgba(45, 212, 191, 0.06);
+
+  --region-green-from: rgba(20, 83, 45, 0.5);
+  --region-green-to: rgba(19, 78, 74, 0.3);
+  --region-amber-from: rgba(120, 53, 15, 0.5);
+  --region-amber-to: rgba(20, 83, 45, 0.3);
+  --region-blue-from: rgba(30, 58, 138, 0.5);
+  --region-blue-to: rgba(19, 78, 74, 0.3);
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+
+  --background: #f4faf6;
+  --foreground: #10281f;
+  --bg-card: #ffffff;
+  --bg-card-2: #f7fcf9;
+  --bg-card-hover: #eaf7ef;
+  --accent-green: #15803d;
+  --accent-teal: #0f766e;
+  --accent-amber: #b45309;
+  --accent-red: #b91c1c;
+  --text-secondary: #166534;
+  --text-muted: #4b6b5b;
+  --border-card: #cfe8da;
+  --border-glow: #16a34a;
+  --glow-green: 0 0 20px rgba(22, 163, 74, 0.12);
+  --glow-teal: 0 0 20px rgba(13, 148, 136, 0.12);
+
+  --surface-muted: rgba(15, 40, 30, 0.04);
+  --surface-selected: rgba(22, 163, 74, 0.1);
+  --input-bg: rgba(15, 40, 30, 0.04);
+  --track-bg: rgba(15, 40, 30, 0.1);
+  --switch-off: #cbd5e1;
+  --skeleton-base: rgba(15, 40, 30, 0.05);
+  --skeleton-highlight: rgba(15, 40, 30, 0.1);
+  --overlay-backdrop: rgba(15, 40, 30, 0.35);
+  --locked-overlay: rgba(244, 250, 246, 0.75);
+
+  --decor-green: rgba(22, 163, 74, 0.14);
+  --decor-teal: rgba(13, 148, 136, 0.14);
+  --body-glow-green: rgba(34, 197, 94, 0.1);
+  --body-glow-teal: rgba(45, 212, 191, 0.1);
+
+  --region-green-from: rgba(22, 163, 74, 0.16);
+  --region-green-to: rgba(13, 148, 136, 0.1);
+  --region-amber-from: rgba(245, 158, 11, 0.16);
+  --region-amber-to: rgba(22, 163, 74, 0.1);
+  --region-blue-from: rgba(59, 130, 246, 0.14);
+  --region-blue-to: rgba(13, 148, 136, 0.1);
 }
 
 @theme inline {
@@ -24,14 +92,19 @@
   --font-mono: var(--font-geist-mono);
 }
 
+html {
+  background: var(--background);
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, sans-serif;
   background-image:
-    radial-gradient(ellipse at 20% 20%, rgba(34, 197, 94, 0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 80%, rgba(45, 212, 191, 0.06) 0%, transparent 50%);
+    radial-gradient(ellipse at 20% 20%, var(--body-glow-green) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, var(--body-glow-teal) 0%, transparent 50%);
   min-height: 100vh;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 /* Scrollbar */
@@ -72,11 +145,19 @@ body {
   animation: shimmer 3s linear infinite;
 }
 
+[data-theme='light'] .shimmer-text {
+  background: linear-gradient(90deg, #15803d, #0f766e, #166534, #15803d);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 .eco-card {
-  background: linear-gradient(135deg, #132b23 0%, #0f2219 100%);
+  background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-2) 100%);
   border: 1px solid var(--border-card);
   border-radius: 16px;
-  transition: all 0.3s ease;
+  transition: background 0.25s ease, border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
 }
 
 .eco-card:hover {
@@ -117,7 +198,7 @@ body {
 }
 
 .progress-bar-bg {
-  background: rgba(255,255,255,0.05);
+  background: var(--track-bg);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -144,9 +225,37 @@ body {
 .badge-teal  { background: rgba(45, 212, 191, 0.15); color: #2dd4bf; border: 1px solid rgba(45, 212, 191, 0.3); }
 .badge-amber { background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); }
 .badge-red   { background: rgba(248, 113, 113, 0.15); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.3); }
-.badge-gray  { background: rgba(255,255,255,0.05); color: #6b7280; border: 1px solid rgba(255,255,255,0.1); }
+.badge-gray  { background: var(--surface-muted); color: var(--text-muted); border: 1px solid var(--border-card); }
+
+[data-theme='light'] .badge-green  { background: rgba(22, 163, 74, 0.12); color: #15803d; border-color: rgba(22, 163, 74, 0.3); }
+[data-theme='light'] .badge-teal   { background: rgba(13, 148, 136, 0.12); color: #0f766e; border-color: rgba(13, 148, 136, 0.3); }
+[data-theme='light'] .badge-amber  { background: rgba(180, 83, 9, 0.1); color: #b45309; border-color: rgba(180, 83, 9, 0.3); }
+[data-theme='light'] .badge-red    { background: rgba(185, 28, 28, 0.1); color: #b91c1c; border-color: rgba(185, 28, 28, 0.3); }
 
 .locked-overlay {
-  background: rgba(13, 31, 26, 0.7);
+  background: var(--locked-overlay);
   backdrop-filter: blur(2px);
+}
+
+.region-hero-green {
+  background-image: linear-gradient(135deg, var(--region-green-from), var(--region-green-to));
+}
+
+.region-hero-amber {
+  background-image: linear-gradient(135deg, var(--region-amber-from), var(--region-amber-to));
+}
+
+.region-hero-blue {
+  background-image: linear-gradient(135deg, var(--region-blue-from), var(--region-blue-to));
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-base) 25%,
+    var(--skeleton-highlight) 50%,
+    var(--skeleton-base) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
 }

@@ -1,0 +1,10 @@
+<h2>Reset your password</h2>
+<p>We received a request to reset your password. Enter this 6-digit code in EcoSim:</p>
+<p style="font-size: 24px; letter-spacing: 6px;"><strong>{{ .Token }}</strong></p>
+<p>Or follow this link to choose a new password:</p>
+<p>
+  <a href="{{ .SiteURL }}/auth/recovery?token_hash={{ .TokenHash }}&type=recovery">
+    Reset password
+  </a>
+</p>
+<p>If you didn't request this, you can safely ignore this email.</p>

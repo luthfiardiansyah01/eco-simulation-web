@@ -2,8 +2,12 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import { Achievement } from '@/types'
+import { usePreferences } from '@/components/settings/PreferencesProvider'
 
 export default function AchievementToast({ achievements }: { achievements: Achievement[] }) {
+  const { notifications } = usePreferences()
+  if (!notifications) return null
+
   return (
     <div className="fixed top-4 right-4 z-50 flex flex-col gap-2">
       <AnimatePresence>
