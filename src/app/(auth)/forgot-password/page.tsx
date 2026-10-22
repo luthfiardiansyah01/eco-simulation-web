@@ -1,4 +1,5 @@
 import ForgotPasswordForm from './ForgotPasswordForm'
+import AuthErrorBoundary from '@/components/errors/AuthErrorBoundary'
 
 const ERROR_MESSAGES: Record<string, string> = {
   invalid_code:
@@ -17,5 +18,12 @@ export default async function ForgotPasswordPage({
     ? ERROR_MESSAGES[error] ?? 'Terjadi kesalahan. Coba lagi.'
     : ''
 
-  return <ForgotPasswordForm initialError={initialError} />
+  return (
+    <AuthErrorBoundary
+      title="Halaman pemulihan gagal dimuat"
+      description="Terjadi kesalahan saat memuat form pemulihan password. Coba lagi atau kembali ke halaman masuk."
+    >
+      <ForgotPasswordForm initialError={initialError} />
+    </AuthErrorBoundary>
+  )
 }

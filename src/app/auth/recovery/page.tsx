@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { EmailOtpType } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
+import AuthErrorBoundary from '@/components/errors/AuthErrorBoundary'
 
 type RecoveryState = 'loading' | 'error'
 
@@ -24,7 +25,7 @@ function recoveryErrorMessage(message: string) {
   return message
 }
 
-export default function RecoveryLinkPage() {
+function RecoveryLinkContent() {
   const router = useRouter()
   const startedRef = useRef(false)
   const [state, setState] = useState<RecoveryState>('loading')
@@ -182,5 +183,18 @@ export default function RecoveryLinkPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function RecoveryLinkPage() {
+  return (
+    <AuthErrorBoundary
+      title="Tautan reset gagal diproses"
+      description="Terjadi kesalahan saat memproses tautan reset. Minta kode verifikasi baru atau kembali ke halaman masuk."
+      backHref="/forgot-password"
+      backLabel="Minta Kode Baru"
+    >
+      <RecoveryLinkContent />
+    </AuthErrorBoundary>
   )
 }
