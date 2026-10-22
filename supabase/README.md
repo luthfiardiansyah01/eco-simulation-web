@@ -3,8 +3,8 @@
 ## Fresh project
 
 Run `schema.sql` once in the Supabase SQL editor (or `supabase db reset` if you use the CLI).
-It creates the tables, RLS policies, achievement seed data, the signup trigger, the
-`complete_mission` RPC, and the public `get_leaderboard` RPC.
+It creates the tables, RLS policies, achievement and mission catalogs, the signup trigger,
+the validated `complete_mission` RPC, and the public `get_leaderboard` RPC.
 
 ## Existing project
 
@@ -21,12 +21,21 @@ The migrations are idempotent and add:
 - `achievements` and `user_achievements` tables + policies + seed rows,
 - a unique `(user_id, region_id, level)` result key,
 - a collision-safe `handle_new_user` trigger,
-- `complete_mission(...)`, which merges completed levels, accumulates research points,
-  prevents replay farming, and enforces sequential level progression transactionally,
+- a `mission_catalog` table containing the server-side objectives, rewards, and cooldown
+  for each region/level,
+- `complete_mission(...)`, which validates the final metrics against `mission_catalog`,
+  derives research points on the server, merges completed levels transactionally, prevents
+  replay farming, and enforces sequential level progression,
+- a completion cooldown that rejects first-time completions submitted less than 30 seconds
+  after the previous mission (replays remain idempotent),
 - `get_leaderboard(...)`, a `security definer` RPC that exposes only usernames and
   aggregate single-player stats so guests can view rankings without direct table access,
-- a leaderboard-integrity guard that revokes direct `user_progress` writes, so progress
-  can only be changed through `complete_mission`.
+- integrity guards that revoke direct `user_progress` and `mission_results` writes, so
+  progress can only be changed through `complete_mission`.
+
+Keep `mission_catalog` in sync with `src/data/regions.ts` whenever objectives, rewards, or
+mission levels change. A level that exists in the app but not in the catalog is rejected
+by the RPC instead of silently saving untrusted progress.
 
 ## Required environment variables
 
@@ -35,8 +44,9 @@ NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 ```
 
-The app calls `complete_mission` after a mission; if the RPC is missing the completion
-screen reports a save error instead of pretending progress was stored. The leaderboard
+The app calls `complete_mission` after a mission; if the RPC is missing, rejects the
+submitted objectives, or is rate-limited, the completion screen reports the save error
+and offers retry/reset actions instead of pretending progress was stored. The leaderboard
 page calls `get_leaderboard`; if that RPC is missing it shows a setup message instead of
 an empty ranking.
 

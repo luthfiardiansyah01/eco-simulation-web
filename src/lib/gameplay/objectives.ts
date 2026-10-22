@@ -89,6 +89,40 @@ export function objectiveTarget(
 }
 
 /**
+ * Whether an action can still move an unmet objective forward.
+ *
+ * Utility actions (map, scan, analysis) intentionally return false here. This
+ * is used to detect a mission that is out of resources and can no longer be
+ * completed, rather than treating a free utility action as progress.
+ */
+export function canAdvanceObjective(
+  action: GameAction,
+  objectives: MissionObjective[],
+  status: EnvironmentStatus
+): boolean {
+  const hasUnmet = (metric: ObjectiveMetric) => objectives.some(
+    (objective) => objective.metric === metric && !isObjectiveComplete(objective, status)
+  )
+
+  switch (action) {
+    case 'clean_waste':
+      // Cleaning only adds fish when pollution actually decreases.
+      return status.pollution > 0
+        && (hasUnmet('pollution') || hasUnmet('fishPopulation'))
+    case 'plant_tree':
+      return hasUnmet('trees')
+        || (hasUnmet('biodiversity') && status.biodiversity < 100)
+    case 'build_filter':
+      return hasUnmet('fishPopulation')
+        || (hasUnmet('waterQuality') && status.waterQuality < 100)
+    case 'deploy_drone':
+      return hasUnmet('drones')
+    default:
+      return false
+  }
+}
+
+/**
  * Credit/energy actions stay available while they can still move an objective.
  * Energy-only actions without an objective (e.g. drone survey on level 1) remain
  * usable; credit actions with no matching objective are disabled to protect the
@@ -99,23 +133,21 @@ export function isActionUseful(
   objectives: MissionObjective[],
   status: EnvironmentStatus
 ): boolean {
-  const hasUnmet = (metric: ObjectiveMetric) => objectives.some(
-    (objective) => objective.metric === metric && !isObjectiveComplete(objective, status)
-  )
-  const hasObjective = (metric: ObjectiveMetric) => objectives.some(
-    (objective) => objective.metric === metric
-  )
-
-  switch (action) {
-    case 'clean_waste':
-      return hasUnmet('pollution') || hasUnmet('fishPopulation')
-    case 'plant_tree':
-      return hasUnmet('trees') || hasUnmet('biodiversity')
-    case 'build_filter':
-      return hasUnmet('fishPopulation') || hasUnmet('waterQuality')
-    case 'deploy_drone':
-      return hasObjective('drones') ? hasUnmet('drones') : true
-    default:
-      return true
+  if (action === 'deploy_drone') {
+    const hasDroneObjective = objectives.some((objective) => objective.metric === 'drones')
+    return hasDroneObjective
+      ? canAdvanceObjective(action, objectives, status)
+      : true
   }
+
+  if (
+    action === 'clean_waste' ||
+    action === 'plant_tree' ||
+    action === 'build_filter'
+  ) {
+    return canAdvanceObjective(action, objectives, status)
+  }
+
+  // Map, scan, analysis, and base actions are utility actions.
+  return true
 }

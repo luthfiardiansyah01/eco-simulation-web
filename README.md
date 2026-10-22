@@ -116,7 +116,9 @@ Preferences are stored in `localStorage` under `ecosim_volume`, `ecosim_theme`, 
 
 `/leaderboard` is a public single-player ranking for registered players. Players are ordered by total research points across all regions, then by completed missions, achievements, and active regions. Guests can view the board; signing in saves progress and adds the player to the ranking.
 
-Rankings are read through the `get_leaderboard(p_limit)` RPC in `supabase/migrations/20261022000000_leaderboard.sql`. The function uses `security definer` so guests do not need direct access to `profiles` or `user_progress`, and it only returns a username plus aggregate counts. Direct writes to `user_progress` are revoked; progress is written only by the server-side `complete_mission` RPC. The page is linked from the home footer, the profile page, and the PWA shortcut menu.
+Rankings are read through the `get_leaderboard(p_limit)` RPC in `supabase/migrations/20261022000000_leaderboard.sql`. The function uses `security definer` so guests do not need direct access to `profiles` or `user_progress`, and it only returns a username plus aggregate counts. Direct writes to `user_progress` and `mission_results` are revoked; progress is written only by the server-side `complete_mission` RPC. The page is linked from the home footer, the profile page, and the PWA shortcut menu.
+
+Mission completion is validated against the server-side `mission_catalog` before progress is stored. The RPC checks the final pollution, biodiversity, water, fish, tree, and drone values, derives research points from the catalog instead of trusting the client, and enforces a 30-second cooldown between first-time completions. This prevents fabricated completion calls from spamming progress. If a mission runs out of affordable actions before its objectives are met, the gameplay screen shows a failure dialog with a **Reset Misi** action; save failures also offer retry and reset.
 
 ## Available scripts
 
@@ -204,5 +206,6 @@ The Android shell is configured in `capacitor.config.ts` and loads the deployed 
 - **PWA is not installable:** use HTTPS (or localhost), verify the manifest and icons in DevTools, and test against a production build.
 - **The game does not work offline:** this is expected. Offline mode only serves the fallback page; missions and progress require a connection.
 - **Old UI still appears after deploy:** clear site data or bump `CACHE_NAME` in `public/sw.js`.
-- **Mission progress is not saved:** sign in and verify the `complete_mission` RPC migration has been applied.
+- **Mission progress is not saved:** sign in and verify the `complete_mission` and `mission_catalog` migration has been applied. If the completion screen shows a validation error, reset the mission and finish every objective before saving.
+- **Mission completion is rate-limited:** first-time completions have a 30-second cooldown. Wait for the message to clear, then retry the save; replays of an already-completed level are not rate-limited.
 - **Leaderboard says it is unavailable:** apply `supabase/migrations/20261022000000_leaderboard.sql` in the Supabase SQL editor or with `supabase db push`.

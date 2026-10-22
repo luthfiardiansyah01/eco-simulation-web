@@ -3,9 +3,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Mission, EnvironmentStatus, EventLog, GameAction, Achievement } from '@/types'
-import { completeMission } from '@/lib/supabase/progress'
+import { completeMission, type CompleteMissionResult } from '@/lib/supabase/progress'
 import { checkAndUnlockAchievements } from '@/lib/supabase/achievements'
 import {
+  canAdvanceObjective,
   formatObjectiveProgress,
   isActionUseful,
   isObjectiveComplete,
@@ -149,9 +150,11 @@ export default function GameplayClient({
   const [logs, setLogs] = useState<EventLog[]>(initialLogs)
   const [missionComplete, setMissionComplete] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>('idle')
+  const [saveError, setSaveError] = useState('')
   const [newAchievements, setNewAchievements] = useState<Achievement[]>([])
   const logSeq = useRef(0)
   const startedRef = useRef(false)
+  const completionGuardRef = useRef(false)
   const mapActionRef = useRef<MapActionTrigger | null>(null)
 
   const treeTarget = objectiveTarget(mission.objectives, 'trees', 50)
@@ -163,6 +166,12 @@ export default function GameplayClient({
     progress: formatObjectiveProgress(objective, status),
   }))
   const progress = missionProgressPercent(mission.objectives, status)
+  const canMakeProgress = ACTIONS.some(
+    (definition) =>
+      canAdvanceObjective(definition.action, mission.objectives, status)
+      && canAfford(ACTION_COSTS[definition.action], status)
+  )
+  const missionFailed = !missionComplete && progress < 100 && !canMakeProgress
 
   function lockOrientation(orientation: 'landscape' | 'portrait') {
     // Native Android bridge (most reliable)
@@ -225,45 +234,95 @@ export default function GameplayClient({
     setLogs((prev) => [entry, ...prev].slice(0, 10))
   }, [])
 
-  const checkMissionComplete = useCallback(async (snapshot: EnvironmentStatus, progressPct: number) => {
-    if (progressPct < 100 || missionComplete) return
+  const resetMission = useCallback(() => {
+    completionGuardRef.current = false
+    setStatus(getStartingStatus(mission, difficulty))
+    setLogs(initialLogs.map((log) => ({ ...log })))
+    setMissionComplete(false)
+    setSaveState('idle')
+    setSaveError('')
+    setNewAchievements([])
+    logSeq.current = 0
+    pushLog('info', 'Misi direset. Sumber daya dan lingkungan dipulihkan.')
+    play('click')
+  }, [difficulty, mission, play, pushLog])
 
-    setMissionComplete(true)
+  const persistMission = useCallback(async (snapshot: EnvironmentStatus) => {
     setSaveState('saving')
-    play('missionComplete')
+    setSaveError('')
 
-    const result = await completeMission(regionId, level, {
-      pollutionFinal: snapshot.pollution,
-      biodiversityFinal: snapshot.biodiversity,
-      treesPlanted: snapshot.trees,
-      researchPointsEarned: mission.researchPoints,
-    })
+    let result: CompleteMissionResult
+
+    try {
+      result = await completeMission(regionId, level, {
+        pollutionFinal: snapshot.pollution,
+        biodiversityFinal: snapshot.biodiversity,
+        waterQualityFinal: snapshot.waterQuality,
+        fishPopulationFinal: snapshot.fishPopulation,
+        treesPlanted: snapshot.trees,
+        dronesDeployed: snapshot.drones,
+      })
+    } catch (error) {
+      console.error('Failed to save mission progress', error)
+      completionGuardRef.current = false
+      setSaveState('error')
+      setSaveError('Koneksi gagal saat menyimpan progress. Coba lagi.')
+      play('error')
+      return
+    }
 
     if (!result.ok) {
       setSaveState(result.reason === 'guest' ? 'guest' : 'error')
-      if (result.reason !== 'guest') play('error')
+      if (result.reason !== 'guest') {
+        setSaveError(result.message ?? 'Gagal menyimpan progress. Coba lagi.')
+        play('error')
+      }
+      completionGuardRef.current = false
       return
     }
 
     setSaveState('saved')
+    completionGuardRef.current = false
 
-    const unlocked = await checkAndUnlockAchievements({
-      treesPlanted: snapshot.trees,
-      pollutionLevel: snapshot.pollution,
-      missionsCompleted: result.progress.completedLevels.length,
-      researchPoints: result.progress.researchPoints,
-    })
-    if (unlocked.length > 0) {
-      setNewAchievements(unlocked)
-      play('achievement')
+    try {
+      const unlocked = await checkAndUnlockAchievements({
+        treesPlanted: snapshot.trees,
+        pollutionLevel: snapshot.pollution,
+        missionsCompleted: result.progress.completedLevels.length,
+        researchPoints: result.progress.researchPoints,
+      })
+      if (unlocked.length > 0) {
+        setNewAchievements(unlocked)
+        play('achievement')
+      }
+    } catch (error) {
+      // Mission progress is already saved; achievement errors are non-fatal.
+      console.error('Failed to evaluate achievements', error)
     }
-  }, [missionComplete, regionId, level, mission.researchPoints, play])
+  }, [level, play, regionId])
+
+  const checkMissionComplete = useCallback(async (snapshot: EnvironmentStatus, progressPct: number) => {
+    if (progressPct < 100 || missionComplete || completionGuardRef.current) return
+
+    completionGuardRef.current = true
+    setMissionComplete(true)
+    play('missionComplete')
+    await persistMission(snapshot)
+  }, [missionComplete, persistMission, play])
+
+  const retrySave = useCallback(() => {
+    if (completionGuardRef.current) return
+    completionGuardRef.current = true
+    void persistMission(status)
+  }, [persistMission, status])
 
   const registerMapAction = useCallback((trigger: MapActionTrigger) => {
     mapActionRef.current = trigger
   }, [])
 
   const handleAction = useCallback((definition: ActionDefinition) => {
+    if (missionComplete || missionFailed) return
+
     if (!isActionUseful(definition.action, mission.objectives, status)) {
       play('error')
       pushLog('info', `Aksi ${definition.label} tidak lagi diperlukan untuk objektif.`)
@@ -289,7 +348,7 @@ export default function GameplayClient({
       result.status,
       missionProgressPercent(mission.objectives, result.status)
     )
-  }, [status, treeTarget, droneTarget, pushLog, checkMissionComplete, mission.objectives, play])
+  }, [status, treeTarget, droneTarget, pushLog, checkMissionComplete, mission.objectives, missionComplete, missionFailed, play])
 
   const barColor = (val: number, inv = false) => {
     const v = inv ? 100 - val : val
@@ -331,15 +390,59 @@ export default function GameplayClient({
             <div className="eco-card p-6 text-center max-w-xs w-full" style={{ borderColor: 'var(--accent-green)', boxShadow: 'var(--glow-green)' }}>
               <div className="text-4xl mb-3">🎉</div>
               <h2 className="text-xl font-bold text-[var(--accent-green)] mb-1">Misi Selesai!</h2>
-              <p className="text-xs text-[var(--text-muted)] mb-4">{saveMessage[saveState]}</p>
+              <p className="text-xs text-[var(--text-muted)] mb-2">{saveMessage[saveState]}</p>
+              {saveState === 'error' && (
+                <p role="alert" className="text-[11px] leading-relaxed text-[var(--accent-red)] mb-4">
+                  {saveError || 'Gagal menyimpan progress. Coba lagi atau reset misi.'}
+                </p>
+              )}
               <div className="eco-card p-3 mb-4 space-y-1.5 text-xs">
                 <div className="flex justify-between"><span className="text-[var(--text-muted)]">Research Points</span><span className="text-[var(--accent-amber)] font-bold">+{mission.researchPoints} ⭐</span></div>
                 <div className="flex justify-between"><span className="text-[var(--text-muted)]">Kesulitan</span><span className="font-semibold" style={{ color: difficultyMeta.accent }}>{difficultyMeta.label}</span></div>
                 <div className="flex justify-between"><span className="text-[var(--text-muted)]">Level berikutnya</span><span className="text-[var(--accent-teal)]">Level {level + 1} 🔓</span></div>
               </div>
-              <div className="flex gap-2">
-                <Link href={`/mission/${regionId}`} className="flex-1"><button className="eco-btn-primary w-full py-2 text-xs" onClick={() => play('click')}>Lanjut →</button></Link>
-                <Link href="/" className="flex-1"><button className="eco-btn-secondary w-full py-2 text-xs" onClick={() => play('click')}>Menu</button></Link>
+              {saveState === 'error' ? (
+                <div className="flex flex-col gap-2">
+                  <button type="button" onClick={retrySave} className="eco-btn-primary w-full py-2 text-xs">
+                    🔄 Coba Simpan Lagi
+                  </button>
+                  <button type="button" onClick={resetMission} className="eco-btn-secondary w-full py-2 text-xs">
+                    Reset Misi
+                  </button>
+                  <Link href={`/mission/${regionId}`} className="eco-btn-secondary block w-full py-2 text-xs text-center" onClick={() => play('click')}>
+                    Kembali
+                  </Link>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Link href={`/mission/${regionId}`} className="flex-1"><button className="eco-btn-primary w-full py-2 text-xs" onClick={() => play('click')}>Lanjut →</button></Link>
+                  <Link href="/" className="flex-1"><button className="eco-btn-secondary w-full py-2 text-xs" onClick={() => play('click')}>Menu</button></Link>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Mission Failed */}
+        {missionFailed && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--overlay-backdrop)', backdropFilter: 'blur(8px)' }}>
+            <div className="eco-card p-6 text-center max-w-xs w-full" style={{ borderColor: 'var(--accent-red)' }}>
+              <div className="text-4xl mb-3">💸</div>
+              <h2 className="text-xl font-bold text-[var(--accent-red)] mb-1">Misi Gagal</h2>
+              <p className="text-xs text-[var(--text-muted)] leading-relaxed mb-4">
+                Sumber daya habis sebelum semua objektif tercapai. Reset misi untuk memulihkan sumber daya dan mencoba lagi.
+              </p>
+              <div className="flex flex-col gap-2">
+                <button type="button" onClick={resetMission} className="eco-btn-primary w-full py-2.5 text-sm">
+                  🔄 Reset Misi
+                </button>
+                <Link
+                  href={`/briefing/${regionId}/${level}?difficulty=${difficulty}`}
+                  className="eco-btn-secondary block w-full py-2.5 text-sm text-center"
+                  onClick={() => play('click')}
+                >
+                  Kembali ke Briefing
+                </Link>
               </div>
             </div>
           </div>
@@ -484,14 +587,22 @@ export default function GameplayClient({
                 const cost = ACTION_COSTS[definition.action]
                 const affordable = canAfford(cost, status)
                 const useful = isActionUseful(definition.action, mission.objectives, status)
-                const enabled = affordable && useful
+                const enabled = affordable && useful && !missionComplete && !missionFailed
 
                 return (
                   <button
                     key={definition.action}
                     onClick={() => handleAction(definition)}
                     disabled={!enabled}
-                    title={!useful ? 'Target aksi ini sudah tercapai' : !affordable ? 'Sumber daya tidak cukup' : undefined}
+                    title={
+                      missionComplete || missionFailed
+                        ? 'Misi sudah berakhir'
+                        : !useful
+                          ? 'Target aksi ini sudah tercapai'
+                          : !affordable
+                            ? 'Sumber daya tidak cukup'
+                            : undefined
+                    }
                     className="flex flex-col items-center justify-center rounded-lg p-1.5 text-center transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                     style={{ background: 'var(--surface-muted)', border: '1px solid var(--border-card)', minHeight: '52px' }}
                     onMouseEnter={(e) => {
