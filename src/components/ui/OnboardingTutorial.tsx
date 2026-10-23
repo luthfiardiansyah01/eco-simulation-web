@@ -16,14 +16,14 @@ const STEPS = [
   {
     emoji: '🗺️',
     title: 'Pilih Mode Petualangan',
-    desc: 'Klik kartu Mode Petualangan di halaman utama untuk memulai petualangan. Selesaikan misi di 3 wilayah: Yogyakarta, Semarang, dan Surabaya.',
+    desc: 'Klik kartu Mode Petualangan di halaman utama untuk memulai petualangan. Selesaikan misi di 3 wilayah: Bandung, Semarang, dan Surabaya.',
     highlight: 'adventure',
     tip: '💡 Jelajah Bebas Klasik akan hadir segera!',
   },
   {
     emoji: '📍',
     title: 'Pilih Wilayah',
-    desc: 'Setiap wilayah punya tantangan unik. Mulai dari Yogyakarta — selesaikan semua level untuk membuka wilayah berikutnya.',
+    desc: 'Setiap wilayah punya tantangan unik. Mulai dari Bandung — selesaikan semua level untuk membuka wilayah berikutnya.',
     highlight: 'region',
     tip: '🔒 Wilayah terkunci akan terbuka saat kamu menyelesaikan region sebelumnya.',
   },
@@ -77,7 +77,7 @@ function buildHighlights(t: Translator): Record<string, React.ReactNode> {
   region: (
     <div className="flex gap-2 justify-center">
       {[
-        { name: 'Yogyakarta', emoji: '🏯', color: '#22c55e', unlocked: true },
+        { name: 'Bandung', emoji: '🏯', color: '#22c55e', unlocked: true },
         { name: 'Semarang', emoji: '⛵', color: '#6b7280', unlocked: false },
         { name: 'Surabaya', emoji: '🦈', color: '#6b7280', unlocked: false },
       ].map((r) => (

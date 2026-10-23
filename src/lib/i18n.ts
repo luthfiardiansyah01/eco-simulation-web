@@ -451,12 +451,12 @@ const EN: Record<string, string> = {
   'Kamu adalah Ranger lingkungan yang bertugas memulihkan ekosistem sungai di Pulau Jawa. Setiap keputusanmu menentukan nasib alam.':
     'You are an environmental Ranger tasked with restoring river ecosystems on the island of Java. Every decision you make shapes the fate of nature.',
   'Pilih Mode Petualangan': 'Choose Adventure Mode',
-  'Klik kartu Mode Petualangan di halaman utama untuk memulai petualangan. Selesaikan misi di 3 wilayah: Yogyakarta, Semarang, dan Surabaya.':
-    'Click the Adventure Mode card on the home page to begin. Complete missions in 3 regions: Yogyakarta, Semarang, and Surabaya.',
+  'Klik kartu Mode Petualangan di halaman utama untuk memulai petualangan. Selesaikan misi di 3 wilayah: Bandung, Semarang, dan Surabaya.':
+    'Click the Adventure Mode card on the home page to begin. Complete missions in 3 regions: Bandung, Semarang, and Surabaya.',
   '💡 Jelajah Bebas Klasik akan hadir segera!': '💡 Classic Free Roam is coming soon!',
   'Pilih Wilayah': 'Choose a Region',
-  'Setiap wilayah punya tantangan unik. Mulai dari Yogyakarta — selesaikan semua level untuk membuka wilayah berikutnya.':
-    'Each region has a unique challenge. Start in Yogyakarta — complete every level to unlock the next region.',
+  'Setiap wilayah punya tantangan unik. Mulai dari Bandung — selesaikan semua level untuk membuka wilayah berikutnya.':
+    'Each region has a unique challenge. Start in Bandung — complete every level to unlock the next region.',
   '🔒 Wilayah terkunci akan terbuka saat kamu menyelesaikan region sebelumnya.':
     '🔒 Locked regions open when you complete the previous region.',
   'Baca Briefing Misi': 'Read the Mission Briefing',
@@ -485,7 +485,7 @@ const EN: Record<string, string> = {
   '🌱 Rank tertinggi: Eco Master (80%+ achievement)':
     '🌱 Highest rank: Eco Master (80%+ achievements)',
   '3 Wilayah · Dinamis': '3 Regions · Dynamic',
-  'Yogyakarta': 'Yogyakarta',
+  'Bandung': 'Bandung',
   'Semarang': 'Semarang',
   'Surabaya': 'Surabaya',
   'Kurangi polusi ≤20%': 'Reduce pollution ≤20%',
