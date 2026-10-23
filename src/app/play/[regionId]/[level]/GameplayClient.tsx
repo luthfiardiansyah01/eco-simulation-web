@@ -386,13 +386,13 @@ export default function GameplayClient({
 
         {/* Mission Complete */}
         {missionComplete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--overlay-backdrop)', backdropFilter: 'blur(8px)' }}>
+          <div data-testid="mission-complete" className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--overlay-backdrop)', backdropFilter: 'blur(8px)' }}>
             <div className="eco-card p-6 text-center max-w-xs w-full" style={{ borderColor: 'var(--accent-green)', boxShadow: 'var(--glow-green)' }}>
               <div className="text-4xl mb-3">🎉</div>
               <h2 className="text-xl font-bold text-[var(--accent-green)] mb-1">Misi Selesai!</h2>
               <p className="text-xs text-[var(--text-muted)] mb-2">{saveMessage[saveState]}</p>
               {saveState === 'error' && (
-                <p role="alert" className="text-[11px] leading-relaxed text-[var(--accent-red)] mb-4">
+                <p data-testid="save-error" role="alert" className="text-[11px] leading-relaxed text-[var(--accent-red)] mb-4">
                   {saveError || 'Gagal menyimpan progress. Coba lagi atau reset misi.'}
                 </p>
               )}
@@ -425,7 +425,7 @@ export default function GameplayClient({
 
         {/* Mission Failed */}
         {missionFailed && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--overlay-backdrop)', backdropFilter: 'blur(8px)' }}>
+          <div data-testid="mission-failed" className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--overlay-backdrop)', backdropFilter: 'blur(8px)' }}>
             <div className="eco-card p-6 text-center max-w-xs w-full" style={{ borderColor: 'var(--accent-red)' }}>
               <div className="text-4xl mb-3">💸</div>
               <h2 className="text-xl font-bold text-[var(--accent-red)] mb-1">Misi Gagal</h2>
@@ -465,7 +465,7 @@ export default function GameplayClient({
             <div className="flex-1 h-1.5 rounded-full" style={{ background: 'var(--track-bg)' }}>
               <div className="h-1.5 rounded-full transition-all" style={{ width: `${progress}%`, background: 'linear-gradient(90deg,#16a34a,#2dd4bf)', boxShadow: '0 0 6px rgba(45,212,191,0.5)' }} />
             </div>
-            <span className="text-[10px] text-[var(--accent-amber)] font-bold whitespace-nowrap">{progress}%</span>
+            <span data-testid="mission-progress" className="text-[10px] text-[var(--accent-amber)] font-bold whitespace-nowrap">{progress}%</span>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <span className="badge badge-green text-[9px]">● LIVE</span>
@@ -490,15 +490,15 @@ export default function GameplayClient({
               <div>
                 <p className="text-[8px] text-[var(--text-muted)] uppercase tracking-widest mb-1.5">Lingkungan</p>
                 {[
-                  { label: 'Polusi',  val: status.pollution,    inv: true,  emoji: '☁️' },
-                  { label: 'Bio',     val: status.biodiversity, inv: false, emoji: '🦋' },
-                  { label: 'Air',     val: status.waterQuality, inv: false, emoji: '💧' },
-                  { label: 'Ikan',    val: status.fishPopulation,inv: false,emoji: '🐟' },
-                ].map(({ label, val, inv, emoji }) => (
-                  <div key={label} className="mb-2">
+                  { key: 'pollution',     label: 'Polusi', val: status.pollution,     inv: true,  emoji: '☁️' },
+                  { key: 'biodiversity',  label: 'Bio',    val: status.biodiversity,  inv: false, emoji: '🦋' },
+                  { key: 'waterQuality',  label: 'Air',    val: status.waterQuality,  inv: false, emoji: '💧' },
+                  { key: 'fishPopulation',label: 'Ikan',   val: status.fishPopulation,inv: false, emoji: '🐟' },
+                ].map(({ key, label, val, inv, emoji }) => (
+                  <div key={key} className="mb-2">
                     <div className="flex justify-between items-center mb-0.5">
                       <span className="text-[9px] text-[var(--text-muted)]">{emoji} {label}</span>
-                      <span className="text-[9px] font-medium text-foreground">{val}%</span>
+                      <span data-testid={`env-${key}`} className="text-[9px] font-medium text-foreground">{val}%</span>
                     </div>
                     <div className="h-1 rounded-full" style={{ background: 'var(--track-bg)' }}>
                       <div className="h-1 rounded-full transition-all" style={{ width: `${val}%`, background: barColor(val, inv) }} />
@@ -511,14 +511,14 @@ export default function GameplayClient({
               <div className="space-y-1">
                 <p className="text-[8px] text-[var(--text-muted)] uppercase tracking-widest mb-1">Sumber Daya</p>
                 {[
-                  { icon: '🌳', label: `${status.trees}/${treeTarget}` },
-                  { icon: '⚡', label: `${status.energy}` },
-                  { icon: '💰', label: `${status.credits}` },
-                  { icon: '🚁', label: `${status.drones}/${droneTarget}` },
-                ].map(({ icon, label }) => (
-                  <div key={icon} className="flex justify-between text-[9px]">
+                  { key: 'trees',   icon: '🌳', label: `${status.trees}/${treeTarget}` },
+                  { key: 'energy',  icon: '⚡', label: `${status.energy}` },
+                  { key: 'credits', icon: '💰', label: `${status.credits}` },
+                  { key: 'drones',  icon: '🚁', label: `${status.drones}/${droneTarget}` },
+                ].map(({ key, icon, label }) => (
+                  <div key={key} className="flex justify-between text-[9px]">
                     <span>{icon}</span>
-                    <span className="text-foreground font-medium">{label}</span>
+                    <span data-testid={`resource-${key}`} className="text-foreground font-medium">{label}</span>
                   </div>
                 ))}
               </div>
@@ -592,6 +592,7 @@ export default function GameplayClient({
                 return (
                   <button
                     key={definition.action}
+                    data-testid={`action-${definition.action}`}
                     onClick={() => handleAction(definition)}
                     disabled={!enabled}
                     title={

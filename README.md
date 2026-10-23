@@ -128,6 +128,32 @@ Mission completion is validated against the server-side `mission_catalog` before
 | `npm run build` | Create an optimized production build |
 | `npm start` | Serve the production build |
 | `npm run lint` | Run ESLint |
+| `npm run test:e2e` | Run the Playwright end-to-end suite |
+| `npm run test:e2e:ui` | Run Playwright in interactive UI mode |
+| `npm run test:e2e:report` | Open the last HTML test report |
+
+## E2E tests
+
+Playwright covers the critical mission flows:
+
+- guest completion and the sign-in prompt,
+- signed-in completion and the exact metrics sent to `complete_mission`,
+- rate-limit errors, retry, and reset actions,
+- the **Misi Gagal** dialog and mission reset after running out of resources.
+
+The suite starts a dedicated Next.js dev server on port `3100` and mocks Supabase at
+`http://127.0.0.1:54321`, so it does not touch the real project or need test credentials.
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+On Windows, use `npx playwright install chromium` once before the first run. Set
+`CI=true` to enable retries and the GitHub reporter. The workflow in
+[`.github/workflows/e2e.yml`](./.github/workflows/e2e.yml) runs the same suite on pushes
+and pull requests. The real database validation and cooldown behavior are covered
+separately by SQL rollback tests; see [`supabase/README.md`](./supabase/README.md).
 
 ## PWA and network behavior
 
@@ -173,6 +199,8 @@ src/
   data/                Regions, missions, and level definitions
   lib/                 Supabase clients, progress, gameplay, audio, and helpers
   proxy.ts             Next.js 16 session-refresh proxy
+e2e/                   Playwright mission-flow tests and Supabase mocks
+playwright.config.ts   E2E web server and browser configuration
 public/
   icons/               PWA icons (72–512 px)
   images/              Region and mission artwork
