@@ -7,6 +7,9 @@ import {
   parseDifficulty,
 } from '@/lib/gameplay/difficulty'
 import { notFound } from 'next/navigation'
+import { getTranslator } from '@/lib/i18n-server'
+import { localizeMission } from '@/lib/i18n-content'
+import { formatNumber } from '@/lib/i18n'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,8 +22,10 @@ export default async function BriefingPage({
 }) {
   const { regionId, level } = await params
   const { difficulty: difficultyParam } = await searchParams
+  const { language, t } = await getTranslator()
   const mission = MISSIONS.find((m) => m.regionId === regionId && m.level === parseInt(level))
   if (!mission) notFound()
+  const localizedMission = localizeMission(mission, language)
 
   const difficulty = parseDifficulty(difficultyParam)
   const selectedDifficulty = DIFFICULTIES[difficulty]
@@ -45,7 +50,7 @@ export default async function BriefingPage({
 
         {/* Back nav */}
         <SoundLink href={`/mission/${regionId}`} className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)] hover:text-[var(--accent-green)] transition-colors mb-5">
-          ← Kembali ke Daftar Misi
+          {t('← Kembali ke Daftar Misi')}
         </SoundLink>
 
         {/* Mission header */}
@@ -54,11 +59,15 @@ export default async function BriefingPage({
             <span className="text-4xl mt-1">{meta.emoji}</span>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <span className="badge badge-teal">Level {mission.level}</span>
-                <span className="badge badge-amber">⭐ +{mission.researchPoints} pts</span>
+                <span className="badge badge-teal">
+                  {t('Level {level}', { level: mission.level })}
+                </span>
+                <span className="badge badge-amber">
+                  ⭐ +{mission.researchPoints} {t('pts')}
+                </span>
               </div>
-              <h1 className="text-xl font-bold text-foreground mb-1">{mission.title}</h1>
-              <p className="text-xs text-[var(--text-muted)]">📍 {mission.location}</p>
+              <h1 className="text-xl font-bold text-foreground mb-1">{localizedMission.title}</h1>
+              <p className="text-xs text-[var(--text-muted)]">📍 {localizedMission.location}</p>
             </div>
           </div>
         </div>
@@ -67,10 +76,10 @@ export default async function BriefingPage({
         <div className="eco-card p-5 mb-4">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-lg">📖</span>
-            <h2 className="text-sm font-semibold text-[var(--accent-green)] tracking-wide uppercase">Latar Belakang</h2>
+            <h2 className="text-sm font-semibold text-[var(--accent-green)] tracking-wide uppercase">{t('Latar Belakang')}</h2>
           </div>
           <p className="text-sm leading-relaxed text-[var(--foreground)] opacity-90">
-            {mission.story}
+            {localizedMission.story}
           </p>
         </div>
 
@@ -78,10 +87,10 @@ export default async function BriefingPage({
         <div className="eco-card p-5 mb-4">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-lg">🎯</span>
-            <h2 className="text-sm font-semibold text-[var(--accent-teal)] tracking-wide uppercase">Objektif Misi</h2>
+            <h2 className="text-sm font-semibold text-[var(--accent-teal)] tracking-wide uppercase">{t('Objektif Misi')}</h2>
           </div>
           <ul className="space-y-2.5">
-            {mission.objectives.map((obj, i) => (
+            {localizedMission.objectives.map((obj, i) => (
               <li key={`${obj.metric}-${obj.target}`} className="flex items-start gap-3">
                 <span className="text-base mt-0.5 flex-shrink-0">{objectiveIcons[i] ?? '•'}</span>
                 <span className="text-sm text-[var(--foreground)] opacity-85">{obj.label}</span>
@@ -94,10 +103,10 @@ export default async function BriefingPage({
         <div className="eco-card p-5 mb-4">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-lg">🏆</span>
-            <h2 className="text-sm font-semibold text-[var(--accent-amber)] tracking-wide uppercase">Hadiah</h2>
+            <h2 className="text-sm font-semibold text-[var(--accent-amber)] tracking-wide uppercase">{t('Hadiah')}</h2>
           </div>
           <ul className="space-y-2.5">
-            {mission.rewards.map((reward, i) => (
+            {localizedMission.rewards.map((reward, i) => (
               <li key={reward} className="flex items-start gap-3">
                 <span className="text-base mt-0.5 flex-shrink-0">{rewardIcons[i] ?? '•'}</span>
                 <span className="text-sm text-[var(--foreground)] opacity-85">{reward}</span>
@@ -110,10 +119,10 @@ export default async function BriefingPage({
         <div className="eco-card p-5 mb-4">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-lg">⚙️</span>
-            <h2 className="text-sm font-semibold text-[var(--accent-teal)] tracking-wide uppercase">Tingkat Kesulitan</h2>
+            <h2 className="text-sm font-semibold text-[var(--accent-teal)] tracking-wide uppercase">{t('Tingkat Kesulitan')}</h2>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-3" role="group" aria-label="Tingkat kesulitan">
+          <div className="grid gap-2 sm:grid-cols-3" role="group" aria-label={t('Tingkat kesulitan')}>
             {DIFFICULTY_ORDER.map((id) => {
               const option = DIFFICULTIES[id]
               const active = id === difficulty
@@ -135,13 +144,13 @@ export default async function BriefingPage({
                     <span className="text-base">{option.emoji}</span>
                     {active && (
                       <span className="text-[8px] font-bold tracking-wide" style={{ color: option.accent }}>
-                        DIPILIH
+                        {t('DIPILIH')}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs font-semibold text-foreground">{option.label}</p>
+                  <p className="text-xs font-semibold text-foreground">{t(option.label)}</p>
                   <p className="text-[10px] text-[var(--text-muted)] leading-tight mt-0.5">
-                    {option.tagline}
+                    {t(option.tagline)}
                   </p>
                 </SoundLink>
               )
@@ -156,24 +165,24 @@ export default async function BriefingPage({
               <span className="text-sm">{selectedDifficulty.emoji}</span>
               <div>
                 <p className="text-[11px] font-semibold text-foreground">
-                  Mode {selectedDifficulty.label}
+                  {t('Mode {label}', { label: t(selectedDifficulty.label) })}
                 </p>
                 <p className="text-[10px] text-[var(--text-muted)] leading-tight mt-0.5">
-                  {selectedDifficulty.description}
+                  {t(selectedDifficulty.description)}
                 </p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-1 mt-2.5 text-[10px]">
               {[
-                ['☁️ Polusi', `${startingStatus.pollution}%`],
-                ['🦋 Bio', `${startingStatus.biodiversity}%`],
-                ['💧 Air', `${startingStatus.waterQuality}%`],
-                ['🐟 Ikan', `${startingStatus.fishPopulation}%`],
-                ['🌳 Pohon', `${startingStatus.trees}`],
-                ['🚁 Drone', `${startingStatus.drones}`],
-                ['💰 Kredit', startingStatus.credits.toLocaleString('id-ID')],
-                ['⚡ Energi', `${startingStatus.energy}`],
+                [t('☁️ Polusi'), `${startingStatus.pollution}%`],
+                [t('🦋 Bio'), `${startingStatus.biodiversity}%`],
+                [t('💧 Air'), `${startingStatus.waterQuality}%`],
+                [t('🐟 Ikan'), `${startingStatus.fishPopulation}%`],
+                [t('🌳 Pohon'), `${startingStatus.trees}`],
+                [t('🚁 Drone'), `${startingStatus.drones}`],
+                [t('💰 Kredit'), formatNumber(startingStatus.credits, language)],
+                [t('⚡ Energi'), `${startingStatus.energy}`],
               ].map(([label, value]) => (
                 <div key={label} className="flex items-center justify-between gap-2">
                   <span className="text-[var(--text-muted)]">{label}</span>
@@ -184,7 +193,7 @@ export default async function BriefingPage({
           </div>
 
           <p className="text-[10px] text-[var(--text-muted)] mt-2">
-            Kesulitan hanya memengaruhi kondisi awal dan sumber daya. Objektif dan hadiah tetap sama.
+            {t('Kesulitan hanya memengaruhi kondisi awal dan sumber daya. Objektif dan hadiah tetap sama.')}
           </p>
         </div>
 
@@ -192,7 +201,7 @@ export default async function BriefingPage({
         <div className="flex gap-3">
           <SoundLink href={`/mission/${regionId}`} className="flex-1">
             <button className="eco-btn-secondary w-full py-3 text-sm">
-              ← Kembali
+              {t('← Kembali')}
             </button>
           </SoundLink>
           <SoundLink
@@ -202,7 +211,7 @@ export default async function BriefingPage({
             sound="start"
           >
             <button className="eco-btn-primary w-full py-3 text-sm">
-              ▶ Mulai Simulasi
+              {t('▶ Mulai Simulasi')}
             </button>
           </SoundLink>
         </div>

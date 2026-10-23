@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react'
 import SoundLink from '@/components/audio/SoundLink'
 import { createClient } from '@/lib/supabase/client'
 import { useSound } from '@/components/audio/SoundProvider'
+import { useI18n } from '@/components/settings/PreferencesProvider'
 import { User } from '@supabase/supabase-js'
 
 export default function AuthButton() {
   const { play } = useSound()
+  const { t } = useI18n()
   const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
@@ -34,7 +36,7 @@ export default function AuthButton() {
           <span>{user.email?.split('@')[0]}</span>
         </SoundLink>
         <button onClick={handleSignOut} className="badge badge-gray hover:badge-red transition-colors text-[10px]">
-          Keluar
+          {t('Keluar')}
         </button>
       </div>
     )
@@ -42,7 +44,7 @@ export default function AuthButton() {
 
   return (
     <SoundLink href="/login" className="badge badge-teal hover:opacity-80 transition-opacity">
-      Masuk
+      {t('Masuk')}
     </SoundLink>
   )
 }

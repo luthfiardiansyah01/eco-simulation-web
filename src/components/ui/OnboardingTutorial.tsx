@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSound } from '@/components/audio/SoundProvider'
+import { useI18n } from '@/components/settings/PreferencesProvider'
+import type { Translator } from '@/lib/i18n'
 
 const STEPS = [
   {
@@ -13,10 +15,10 @@ const STEPS = [
   },
   {
     emoji: '🗺️',
-    title: 'Pilih Mode Adventure',
-    desc: 'Klik kartu Adventure Mode di halaman utama untuk memulai petualangan. Selesaikan misi di 3 wilayah: Yogyakarta, Semarang, dan Surabaya.',
+    title: 'Pilih Mode Petualangan',
+    desc: 'Klik kartu Mode Petualangan di halaman utama untuk memulai petualangan. Selesaikan misi di 3 wilayah: Yogyakarta, Semarang, dan Surabaya.',
     highlight: 'adventure',
-    tip: '💡 Classic Free Roam akan hadir segera!',
+    tip: '💡 Jelajah Bebas Klasik akan hadir segera!',
   },
   {
     emoji: '📍',
@@ -55,20 +57,21 @@ const STEPS = [
   },
   {
     emoji: '🏆',
-    title: 'Raih Achievement!',
-    desc: 'Selesaikan misi untuk mengumpulkan Research Points dan membuka Achievement. Naikkan rank dari Recruit hingga Eco Master!',
+    title: 'Raih Pencapaian!',
+    desc: 'Selesaikan misi untuk mengumpulkan Poin Riset dan membuka Pencapaian. Naikkan peringkat dari Recruit hingga Eco Master!',
     highlight: null,
     tip: '🌱 Rank tertinggi: Eco Master (80%+ achievement)',
   },
 ]
 
-const HIGHLIGHT_IMGS: Record<string, React.ReactNode> = {
+function buildHighlights(t: Translator): Record<string, React.ReactNode> {
+  return {
   adventure: (
     <div className="rounded-xl p-3 text-center text-xs" style={{ background: 'var(--surface-selected)', border: '1px solid var(--border-glow)' }}>
       <div className="text-2xl mb-1">🗺️</div>
-      <div className="font-bold text-foreground">Adventure Mode</div>
-      <div className="text-[var(--text-muted)] mt-0.5">3 Wilayah · Dinamis</div>
-      <div className="mt-2 py-1 rounded-lg text-xs font-semibold text-white" style={{ background: 'linear-gradient(135deg,#16a34a,#0d9488)' }}>▶ Mulai Petualangan</div>
+      <div className="font-bold text-foreground">{t('Mode Petualangan')}</div>
+      <div className="text-[var(--text-muted)] mt-0.5">{t('3 Wilayah · Dinamis')}</div>
+      <div className="mt-2 py-1 rounded-lg text-xs font-semibold text-white" style={{ background: 'linear-gradient(135deg,#16a34a,#0d9488)' }}>{t('▶ Mulai Petualangan')}</div>
     </div>
   ),
   region: (
@@ -80,17 +83,17 @@ const HIGHLIGHT_IMGS: Record<string, React.ReactNode> = {
       ].map((r) => (
         <div key={r.name} className="flex-1 rounded-lg p-2 text-center text-[10px]" style={{ background: 'var(--surface-muted)', border: `1px solid ${r.unlocked ? 'var(--border-glow)' : 'var(--border-card)'}` }}>
           <div className="text-xl mb-0.5">{r.emoji}</div>
-          <div className="font-semibold text-foreground leading-tight">{r.name}</div>
-          {!r.unlocked && <div className="text-[8px] mt-1 text-[var(--text-muted)]">🔒 Terkunci</div>}
+          <div className="font-semibold text-foreground leading-tight">{t(r.name)}</div>
+          {!r.unlocked && <div className="text-[8px] mt-1 text-[var(--text-muted)]">{t('🔒 Terkunci')}</div>}
         </div>
       ))}
     </div>
   ),
   briefing: (
     <div className="rounded-xl p-3 text-xs" style={{ background: 'var(--surface-muted)', border: '1px solid var(--border-card)' }}>
-      <div className="font-bold text-[var(--accent-amber)] mb-1.5">🎯 Objektif Misi</div>
+      <div className="font-bold text-[var(--accent-amber)] mb-1.5">🎯 {t('Objektif Misi')}</div>
       <div className="space-y-1">
-        {['Kurangi polusi ≤20%', 'Pulihkan populasi ikan ≥60%', 'Tanam 50 pohon'].map((o) => (
+        {[t('Kurangi polusi ≤20%'), t('Pulihkan populasi ikan ≥60%'), t('Tanam 50 pohon')].map((o) => (
           <div key={o} className="flex items-center gap-1.5 text-[var(--text-muted)]">
             <span className="text-[10px]">⬜</span><span>{o}</span>
           </div>
@@ -101,10 +104,10 @@ const HIGHLIGHT_IMGS: Record<string, React.ReactNode> = {
   status: (
     <div className="rounded-xl p-3 text-[9px]" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-card)', width: '100px' }}>
       {[
-        { emoji: '☁️', label: 'Polusi', val: 78, inv: true },
-        { emoji: '🦋', label: 'Bio', val: 22, inv: false },
-        { emoji: '💧', label: 'Air', val: 31, inv: false },
-        { emoji: '🐟', label: 'Ikan', val: 18, inv: false },
+        { emoji: '☁️', label: t('Polusi'), val: 78, inv: true },
+        { emoji: '🦋', label: t('Bio'), val: 22, inv: false },
+        { emoji: '💧', label: t('Air'), val: 31, inv: false },
+        { emoji: '🐟', label: t('Ikan'), val: 18, inv: false },
       ].map(({ emoji, label, val, inv }) => {
         const v = inv ? 100 - val : val
         const c = v > 60 ? '#22c55e' : v > 30 ? '#eab308' : '#ef4444'
@@ -136,17 +139,17 @@ const HIGHLIGHT_IMGS: Record<string, React.ReactNode> = {
         })}
       </div>
       <div className="flex gap-2 px-2 pb-1.5 text-[8px] text-[var(--text-muted)]">
-        <span>🔵 Air</span><span>🟢 Hijau</span><span>🟤 Cemar</span>
+        <span>🔵 {t('Air')}</span><span>🟢 {t('Hijau')}</span><span>🟤 {t('Cemar')}</span>
       </div>
     </div>
   ),
   actions: (
     <div className="grid grid-cols-4 gap-1.5">
       {[
-        { emoji: '🗑️', label: 'Bersihkan', cost: '-50💰' },
-        { emoji: '🌱', label: 'Tanam', cost: '-30💰' },
-        { emoji: '💧', label: 'Filter', cost: '-150💰' },
-        { emoji: '🚁', label: 'Drone', cost: '-30⚡' },
+        { emoji: '🗑️', label: t('Bersihkan'), cost: '-50💰' },
+        { emoji: '🌱', label: t('Tanam'), cost: '-30💰' },
+        { emoji: '💧', label: t('Filter'), cost: '-150💰' },
+        { emoji: '🚁', label: t('Drone'), cost: '-30⚡' },
       ].map((a) => (
         <div key={a.label} className="flex flex-col items-center rounded-lg p-1.5 text-center" style={{ background: 'var(--surface-muted)', border: '1px solid var(--border-card)' }}>
           <span className="text-lg mb-0.5">{a.emoji}</span>
@@ -156,6 +159,7 @@ const HIGHLIGHT_IMGS: Record<string, React.ReactNode> = {
       ))}
     </div>
   ),
+  }
 }
 
 interface Props {
@@ -165,6 +169,8 @@ interface Props {
 
 export default function OnboardingTutorial({ forceOpen, onClose }: Props = {}) {
   const { play } = useSound()
+  const { t } = useI18n()
+  const highlights = useMemo(() => buildHighlights(t), [t])
   const [visible, setVisible] = useState(false)
   const [step, setStep] = useState(0)
 
@@ -261,17 +267,17 @@ export default function OnboardingTutorial({ forceOpen, onClose }: Props = {}) {
           </div>
 
           {/* Title */}
-          <h2 className="text-lg font-bold text-center text-foreground mb-2">{current.title}</h2>
+          <h2 className="text-lg font-bold text-center text-foreground mb-2">{t(current.title)}</h2>
 
           {/* Description */}
           <p className="text-sm text-[var(--text-muted)] text-center leading-relaxed mb-4 whitespace-pre-line">
-            {current.desc}
+            {t(current.desc)}
           </p>
 
           {/* Visual highlight */}
-          {current.highlight && HIGHLIGHT_IMGS[current.highlight] && (
+          {current.highlight && highlights[current.highlight] && (
             <div className="mb-4">
-              {HIGHLIGHT_IMGS[current.highlight]}
+              {highlights[current.highlight]}
             </div>
           )}
 
@@ -281,7 +287,7 @@ export default function OnboardingTutorial({ forceOpen, onClose }: Props = {}) {
               className="rounded-xl px-3 py-2 text-xs text-center mb-4"
               style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', color: 'var(--accent-amber)' }}
             >
-              {current.tip}
+              {t(current.tip)}
             </div>
           )}
         </div>
@@ -293,21 +299,21 @@ export default function OnboardingTutorial({ forceOpen, onClose }: Props = {}) {
               onClick={prev}
               className="eco-btn-secondary flex-1 py-2.5 text-sm"
             >
-              ← Kembali
+              {t('← Kembali')}
             </button>
           ) : (
             <button
               onClick={finish}
               className="eco-btn-secondary flex-1 py-2.5 text-sm"
             >
-              Lewati
+              {t('Lewati')}
             </button>
           )}
           <button
             onClick={next}
             className="eco-btn-primary flex-1 py-2.5 text-sm"
           >
-            {isLast ? '🌿 Mulai Bermain!' : 'Lanjut →'}
+            {isLast ? t('🌿 Mulai Bermain!') : t('Lanjut →')}
           </button>
         </div>
       </div>

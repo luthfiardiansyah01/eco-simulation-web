@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { Mission, EnvironmentStatus, EventLog, GameAction, Achievement } from '@/types'
 import { completeMission, type CompleteMissionResult } from '@/lib/supabase/progress'
@@ -17,6 +17,7 @@ import AchievementToast from '@/components/game/AchievementToast'
 import IsometricMap, { type MapActionTrigger } from '@/components/game/IsometricMap'
 import SoundToggle from '@/components/audio/SoundToggle'
 import { useSound } from '@/components/audio/SoundProvider'
+import { useI18n } from '@/components/settings/PreferencesProvider'
 import type { SoundName } from '@/lib/audio/sound-engine'
 import {
   DIFFICULTIES,
@@ -55,7 +56,7 @@ const ACTION_SOUNDS: Record<GameAction, SoundName> = {
   return_base: 'click',
 }
 
-const initialLogs: EventLog[] = [
+const INITIAL_LOGS: EventLog[] = [
   { id: '1', type: 'alert',   message: 'Baterai drone hampir habis', timestamp: new Date() },
   { id: '2', type: 'info',    message: 'Ekosistem mulai stabil',     timestamp: new Date() },
   { id: '3', type: 'alert',   message: 'Lonjakan polusi terdeteksi', timestamp: new Date() },
@@ -74,7 +75,12 @@ export default function GameplayClient({
   difficulty: Difficulty
 }) {
   const { play, startAmbience, stopAmbience } = useSound()
+  const { language, t } = useI18n()
   const difficultyMeta = DIFFICULTIES[difficulty]
+  const initialLogs = useMemo(
+    () => INITIAL_LOGS.map((log) => ({ ...log, message: t(log.message) })),
+    [t]
+  )
   const [status, setStatus] = useState<EnvironmentStatus>(() => getStartingStatus(mission, difficulty))
   const [logs, setLogs] = useState<EventLog[]>(initialLogs)
   const [missionComplete, setMissionComplete] = useState(false)
@@ -92,7 +98,7 @@ export default function GameplayClient({
   const objResults = mission.objectives.map((objective) => ({
     ...objective,
     done: isObjectiveComplete(objective, status),
-    progress: formatObjectiveProgress(objective, status),
+    progress: formatObjectiveProgress(objective, status, language),
   }))
   const progress = missionProgressPercent(mission.objectives, status)
   const canMakeProgress = ACTIONS.some(
@@ -148,8 +154,8 @@ export default function GameplayClient({
 
   useEffect(() => {
     if (newAchievements.length === 0) return
-    const t = setTimeout(() => setNewAchievements([]), 4000)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setNewAchievements([]), 4000)
+    return () => clearTimeout(timer)
   }, [newAchievements])
 
   const pushLog = useCallback((type: EventLog['type'], message: string) => {
@@ -172,9 +178,9 @@ export default function GameplayClient({
     setSaveError('')
     setNewAchievements([])
     logSeq.current = 0
-    pushLog('info', 'Misi direset. Sumber daya dan lingkungan dipulihkan.')
+    pushLog('info', t('Misi direset. Sumber daya dan lingkungan dipulihkan.'))
     play('click')
-  }, [difficulty, mission, play, pushLog])
+  }, [difficulty, initialLogs, mission, play, pushLog, t])
 
   const persistMission = useCallback(async (snapshot: EnvironmentStatus) => {
     setSaveState('saving')
@@ -195,7 +201,7 @@ export default function GameplayClient({
       console.error('Failed to save mission progress', error)
       completionGuardRef.current = false
       setSaveState('error')
-      setSaveError('Koneksi gagal saat menyimpan progress. Coba lagi.')
+      setSaveError(t('Koneksi gagal saat menyimpan progress. Coba lagi.'))
       play('error')
       return
     }
@@ -203,7 +209,7 @@ export default function GameplayClient({
     if (!result.ok) {
       setSaveState(result.reason === 'guest' ? 'guest' : 'error')
       if (result.reason !== 'guest') {
-        setSaveError(result.message ?? 'Gagal menyimpan progress. Coba lagi.')
+        setSaveError(result.message ? t(result.message) : t('Gagal menyimpan progress. Coba lagi.'))
         play('error')
       }
       completionGuardRef.current = false
@@ -228,7 +234,7 @@ export default function GameplayClient({
       // Mission progress is already saved; achievement errors are non-fatal.
       console.error('Failed to evaluate achievements', error)
     }
-  }, [level, play, regionId])
+  }, [level, play, regionId, t])
 
   const checkMissionComplete = useCallback(async (snapshot: EnvironmentStatus, progressPct: number) => {
     if (progressPct < 100 || missionComplete || completionGuardRef.current) return
@@ -252,20 +258,38 @@ export default function GameplayClient({
   const handleAction = useCallback((definition: ActionDefinition) => {
     if (missionComplete || missionFailed) return
 
+    const label = t(definition.label)
+
     if (!isActionUseful(definition.action, mission.objectives, status)) {
       play('error')
-      pushLog('info', `Aksi ${definition.label} tidak lagi diperlukan untuk objektif.`)
+      pushLog(
+        'info',
+        t('Aksi {label} tidak lagi diperlukan untuk objektif.', { label })
+      )
       return
     }
 
     const cost = ACTION_COSTS[definition.action]
     if (!canAfford(cost, status)) {
       play('error')
-      pushLog('alert', `Sumber daya tidak cukup untuk ${definition.label} (${formatCost(cost)}).`)
+      pushLog(
+        'alert',
+        t('Sumber daya tidak cukup untuk {label} ({cost}).', {
+          label,
+          cost: formatCost(cost),
+        })
+      )
       return
     }
 
-    const result = applyAction(status, definition.action, definition.label, treeTarget, droneTarget)
+    const result = applyAction(
+      status,
+      definition.action,
+      label,
+      treeTarget,
+      droneTarget,
+      language
+    )
     mapActionRef.current?.(definition.action)
     setStatus(result.status)
     play(ACTION_SOUNDS[definition.action])
@@ -277,7 +301,7 @@ export default function GameplayClient({
       result.status,
       missionProgressPercent(mission.objectives, result.status)
     )
-  }, [status, treeTarget, droneTarget, pushLog, checkMissionComplete, mission.objectives, missionComplete, missionFailed, play])
+  }, [status, treeTarget, droneTarget, pushLog, checkMissionComplete, mission.objectives, missionComplete, missionFailed, play, language, t])
 
   const barColor = (val: number, inv = false) => {
     const v = inv ? 100 - val : val
@@ -286,10 +310,10 @@ export default function GameplayClient({
 
   const saveMessage: Record<SaveState, string> = {
     idle: '',
-    saving: '⏳ Menyimpan...',
-    saved: '✓ Progress tersimpan!',
-    guest: '⚠ Masuk untuk menyimpan progress',
-    error: '⚠ Gagal menyimpan progress',
+    saving: t('⏳ Menyimpan...'),
+    saved: t('✓ Progress tersimpan!'),
+    guest: t('⚠ Masuk untuk menyimpan progress'),
+    error: t('⚠ Gagal menyimpan progress'),
   }
 
   return (
@@ -318,34 +342,34 @@ export default function GameplayClient({
           <div data-testid="mission-complete" className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--overlay-backdrop)', backdropFilter: 'blur(8px)' }}>
             <div className="eco-card p-6 text-center max-w-xs w-full" style={{ borderColor: 'var(--accent-green)', boxShadow: 'var(--glow-green)' }}>
               <div className="text-4xl mb-3">🎉</div>
-              <h2 className="text-xl font-bold text-[var(--accent-green)] mb-1">Misi Selesai!</h2>
+              <h2 className="text-xl font-bold text-[var(--accent-green)] mb-1">{t('Misi Selesai!')}</h2>
               <p className="text-xs text-[var(--text-muted)] mb-2">{saveMessage[saveState]}</p>
               {saveState === 'error' && (
                 <p data-testid="save-error" role="alert" className="text-[11px] leading-relaxed text-[var(--accent-red)] mb-4">
-                  {saveError || 'Gagal menyimpan progress. Coba lagi atau reset misi.'}
+                  {saveError || t('Gagal menyimpan progress. Coba lagi atau reset misi.')}
                 </p>
               )}
               <div className="eco-card p-3 mb-4 space-y-1.5 text-xs">
-                <div className="flex justify-between"><span className="text-[var(--text-muted)]">Research Points</span><span className="text-[var(--accent-amber)] font-bold">+{mission.researchPoints} ⭐</span></div>
-                <div className="flex justify-between"><span className="text-[var(--text-muted)]">Kesulitan</span><span className="font-semibold" style={{ color: difficultyMeta.accent }}>{difficultyMeta.label}</span></div>
-                <div className="flex justify-between"><span className="text-[var(--text-muted)]">Level berikutnya</span><span className="text-[var(--accent-teal)]">Level {level + 1} 🔓</span></div>
+                <div className="flex justify-between"><span className="text-[var(--text-muted)]">{t('Poin Riset')}</span><span className="text-[var(--accent-amber)] font-bold">+{mission.researchPoints} ⭐</span></div>
+                <div className="flex justify-between"><span className="text-[var(--text-muted)]">{t('Kesulitan')}</span><span className="font-semibold" style={{ color: difficultyMeta.accent }}>{t(difficultyMeta.label)}</span></div>
+                <div className="flex justify-between"><span className="text-[var(--text-muted)]">{t('Level berikutnya')}</span><span className="text-[var(--accent-teal)]">{t('Level {level} 🔓', { level: level + 1 })}</span></div>
               </div>
               {saveState === 'error' ? (
                 <div className="flex flex-col gap-2">
                   <button type="button" onClick={retrySave} className="eco-btn-primary w-full py-2 text-xs">
-                    🔄 Coba Simpan Lagi
+                    {t('🔄 Coba Simpan Lagi')}
                   </button>
                   <button type="button" onClick={resetMission} className="eco-btn-secondary w-full py-2 text-xs">
-                    Reset Misi
+                    {t('Reset Misi')}
                   </button>
                   <Link href={`/mission/${regionId}`} className="eco-btn-secondary block w-full py-2 text-xs text-center" onClick={() => play('click')}>
-                    Kembali
+                    {t('Kembali')}
                   </Link>
                 </div>
               ) : (
                 <div className="flex gap-2">
-                  <Link href={`/mission/${regionId}`} className="flex-1"><button className="eco-btn-primary w-full py-2 text-xs" onClick={() => play('click')}>Lanjut →</button></Link>
-                  <Link href="/" className="flex-1"><button className="eco-btn-secondary w-full py-2 text-xs" onClick={() => play('click')}>Menu</button></Link>
+                  <Link href={`/mission/${regionId}`} className="flex-1"><button className="eco-btn-primary w-full py-2 text-xs" onClick={() => play('click')}>{t('Lanjut →')}</button></Link>
+                  <Link href="/" className="flex-1"><button className="eco-btn-secondary w-full py-2 text-xs" onClick={() => play('click')}>{t('Menu')}</button></Link>
                 </div>
               )}
             </div>
@@ -357,20 +381,20 @@ export default function GameplayClient({
           <div data-testid="mission-failed" className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--overlay-backdrop)', backdropFilter: 'blur(8px)' }}>
             <div className="eco-card p-6 text-center max-w-xs w-full" style={{ borderColor: 'var(--accent-red)' }}>
               <div className="text-4xl mb-3">💸</div>
-              <h2 className="text-xl font-bold text-[var(--accent-red)] mb-1">Misi Gagal</h2>
+              <h2 className="text-xl font-bold text-[var(--accent-red)] mb-1">{t('Misi Gagal')}</h2>
               <p className="text-xs text-[var(--text-muted)] leading-relaxed mb-4">
-                Sumber daya habis sebelum semua objektif tercapai. Reset misi untuk memulihkan sumber daya dan mencoba lagi.
+                {t('Sumber daya habis sebelum semua objektif tercapai. Reset misi untuk memulihkan sumber daya dan mencoba lagi.')}
               </p>
               <div className="flex flex-col gap-2">
                 <button type="button" onClick={resetMission} className="eco-btn-primary w-full py-2.5 text-sm">
-                  🔄 Reset Misi
+                  {t('🔄 Reset Misi')}
                 </button>
                 <Link
                   href={`/briefing/${regionId}/${level}?difficulty=${difficulty}`}
                   className="eco-btn-secondary block w-full py-2.5 text-sm text-center"
                   onClick={() => play('click')}
                 >
-                  Kembali ke Briefing
+                  {t('Kembali ke Briefing')}
                 </Link>
               </div>
             </div>
@@ -385,7 +409,7 @@ export default function GameplayClient({
               <p className="text-xs font-semibold text-foreground truncate">{mission.title}</p>
               <p className="text-[9px] text-[var(--text-muted)]">
                 {mission.location} · Lv.{level} ·{' '}
-                <span style={{ color: difficultyMeta.accent }}>{difficultyMeta.label}</span>
+                <span style={{ color: difficultyMeta.accent }}>{t(difficultyMeta.label)}</span>
               </p>
             </div>
           </div>
@@ -397,7 +421,7 @@ export default function GameplayClient({
             <span data-testid="mission-progress" className="text-[10px] text-[var(--accent-amber)] font-bold whitespace-nowrap">{progress}%</span>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="badge badge-green text-[9px]">● LIVE</span>
+            <span className="badge badge-green text-[9px]">● {t('LIVE')}</span>
             <SoundToggle floating={false} />
             <Link
               href={`/briefing/${regionId}/${level}?difficulty=${difficulty}`}
@@ -417,12 +441,12 @@ export default function GameplayClient({
             <div className="p-2 space-y-3">
               {/* Env bars */}
               <div>
-                <p className="text-[8px] text-[var(--text-muted)] uppercase tracking-widest mb-1.5">Lingkungan</p>
+                <p className="text-[8px] text-[var(--text-muted)] uppercase tracking-widest mb-1.5">{t('Lingkungan')}</p>
                 {[
-                  { key: 'pollution',     label: 'Polusi', val: status.pollution,     inv: true,  emoji: '☁️' },
-                  { key: 'biodiversity',  label: 'Bio',    val: status.biodiversity,  inv: false, emoji: '🦋' },
-                  { key: 'waterQuality',  label: 'Air',    val: status.waterQuality,  inv: false, emoji: '💧' },
-                  { key: 'fishPopulation',label: 'Ikan',   val: status.fishPopulation,inv: false, emoji: '🐟' },
+                  { key: 'pollution',     label: t('Polusi'), val: status.pollution,     inv: true,  emoji: '☁️' },
+                  { key: 'biodiversity',  label: t('Bio'),    val: status.biodiversity,  inv: false, emoji: '🦋' },
+                  { key: 'waterQuality',  label: t('Air'),    val: status.waterQuality,  inv: false, emoji: '💧' },
+                  { key: 'fishPopulation',label: t('Ikan'),   val: status.fishPopulation,inv: false, emoji: '🐟' },
                 ].map(({ key, label, val, inv, emoji }) => (
                   <div key={key} className="mb-2">
                     <div className="flex justify-between items-center mb-0.5">
@@ -438,7 +462,7 @@ export default function GameplayClient({
 
               {/* Resources */}
               <div className="space-y-1">
-                <p className="text-[8px] text-[var(--text-muted)] uppercase tracking-widest mb-1">Sumber Daya</p>
+                <p className="text-[8px] text-[var(--text-muted)] uppercase tracking-widest mb-1">{t('Sumber Daya')}</p>
                 {[
                   { key: 'trees',   icon: '🌳', label: `${status.trees}/${treeTarget}` },
                   { key: 'energy',  icon: '⚡', label: `${status.energy}` },
@@ -454,7 +478,7 @@ export default function GameplayClient({
 
               {/* Objectives real-time */}
               <div>
-                <p className="text-[8px] text-[var(--text-muted)] uppercase tracking-widest mb-1.5">Objektif</p>
+                <p className="text-[8px] text-[var(--text-muted)] uppercase tracking-widest mb-1.5">{t('Objektif')}</p>
                 <div className="space-y-2">
                   {objResults.map((obj) => (
                     <div key={`${obj.metric}-${obj.target}`}>
@@ -474,7 +498,7 @@ export default function GameplayClient({
 
               {/* Event log */}
               <div>
-                <p className="text-[8px] text-[var(--text-muted)] uppercase tracking-widest mb-1">Log</p>
+                <p className="text-[8px] text-[var(--text-muted)] uppercase tracking-widest mb-1">{t('Log')}</p>
                 <div className="space-y-1">
                   {logs.slice(0, 3).map((log) => (
                     <p key={log.id} className="text-[8px] leading-tight" style={{ color: log.type === 'alert' ? 'var(--accent-red)' : log.type === 'success' ? 'var(--accent-green)' : 'var(--text-muted)' }}>
@@ -497,20 +521,23 @@ export default function GameplayClient({
               onTileClick={(type) => {
                 play('tile')
                 const msgs: Record<string, string> = {
-                  water:    'Sungai — scan kualitas air',
-                  grass:    'Area hijau — cocok untuk pohon',
-                  tree:     'Pohon teridentifikasi',
-                  polluted: 'Area tercemar — perlu dibersihkan!',
-                  dirt:     'Tanah kosong',
+                  water:    t('Sungai — scan kualitas air'),
+                  grass:    t('Area hijau — cocok untuk pohon'),
+                  tree:     t('Pohon teridentifikasi'),
+                  polluted: t('Area tercemar — perlu dibersihkan!'),
+                  dirt:     t('Tanah kosong'),
                 }
-                pushLog(type === 'polluted' ? 'alert' : 'info', msgs[type] ?? `Tile ${type}`)
+                pushLog(
+                  type === 'polluted' ? 'alert' : 'info',
+                  msgs[type] ?? t('Tile {type}', { type })
+                )
               }}
             />
           </div>
 
           {/* Right: action buttons (vertical) */}
           <div className="flex flex-col border-l overflow-y-auto flex-shrink-0" style={{ width: '72px', borderColor: 'var(--border-card)', background: 'var(--bg-card)' }}>
-            <p className="text-[8px] text-[var(--text-muted)] uppercase tracking-widest text-center py-1.5 border-b flex-shrink-0" style={{ borderColor: 'var(--border-card)' }}>Aksi</p>
+            <p className="text-[8px] text-[var(--text-muted)] uppercase tracking-widest text-center py-1.5 border-b flex-shrink-0" style={{ borderColor: 'var(--border-card)' }}>{t('Aksi')}</p>
             <div className="flex flex-col gap-1 p-1.5 flex-1">
               {ACTIONS.map((definition) => {
                 const cost = ACTION_COSTS[definition.action]
@@ -526,11 +553,11 @@ export default function GameplayClient({
                     disabled={!enabled}
                     title={
                       missionComplete || missionFailed
-                        ? 'Misi sudah berakhir'
+                        ? t('Misi sudah berakhir')
                         : !useful
-                          ? 'Target aksi ini sudah tercapai'
+                          ? t('Target aksi ini sudah tercapai')
                           : !affordable
-                            ? 'Sumber daya tidak cukup'
+                            ? t('Sumber daya tidak cukup')
                             : undefined
                     }
                     className="flex flex-col items-center justify-center rounded-lg p-1.5 text-center transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -546,7 +573,7 @@ export default function GameplayClient({
                     }}
                   >
                     <span className="text-lg leading-none mb-0.5">{definition.emoji}</span>
-                    <span className="text-[8px] text-foreground font-medium leading-tight">{definition.label}</span>
+                    <span className="text-[8px] text-foreground font-medium leading-tight">{t(definition.label)}</span>
                     <span className="text-[7px] mt-0.5" style={{ color: affordable ? 'var(--text-muted)' : 'var(--accent-red)' }}>{formatCost(cost)}</span>
                   </button>
                 )

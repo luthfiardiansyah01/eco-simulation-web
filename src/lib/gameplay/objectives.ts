@@ -1,4 +1,5 @@
 import type { EnvironmentStatus, GameAction, MissionObjective, ObjectiveMetric } from '@/types'
+import { translate, type Language } from '@/lib/i18n'
 
 const METRIC_LABELS: Record<ObjectiveMetric, string> = {
   pollution: 'Polusi',
@@ -67,17 +68,18 @@ export function missionProgressPercent(
 
 export function formatObjectiveProgress(
   objective: MissionObjective,
-  status: EnvironmentStatus
+  status: EnvironmentStatus,
+  language: Language = 'id'
 ): string {
   const value = status[objective.metric]
   const unit = METRIC_UNITS[objective.metric]
-  const label = METRIC_LABELS[objective.metric]
+  const label = translate(language, METRIC_LABELS[objective.metric])
   const target = `${COMPARATOR_SYMBOLS[objective.comparator]}${objective.target}${unit}`
 
   if (unit === '') {
     return `${label}: ${value}/${objective.target}`
   }
-  return `${label}: ${value}${unit} → target ${target}`
+  return `${label}: ${value}${unit} → ${translate(language, 'target')} ${target}`
 }
 
 export function objectiveTarget(

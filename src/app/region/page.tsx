@@ -2,10 +2,16 @@ import SoundLink from '@/components/audio/SoundLink'
 import Image from 'next/image'
 import { REGIONS, MISSION_LEVELS } from '@/data/regions'
 import { getAllProgressServer } from '@/lib/supabase/progress-server'
+import { getTranslator } from '@/lib/i18n-server'
+import {
+  localizeRegion,
+  regionDisplayName,
+} from '@/lib/i18n-content'
 
 export const dynamic = 'force-dynamic'
 
 export default async function RegionPage() {
+  const { language, t } = await getTranslator()
   const allProgress = await getAllProgressServer()
 
   const regions = REGIONS.map((region) => {
@@ -13,7 +19,12 @@ export default async function RegionPage() {
     const totalLevels = MISSION_LEVELS[region.id]?.length ?? 10
     const completedCount = progress?.completedLevels.length ?? 0
     const completionPct = Math.round((completedCount / totalLevels) * 100)
-    return { ...region, completionPct, completedCount, totalLevels }
+    return {
+      ...localizeRegion(region, language),
+      completionPct,
+      completedCount,
+      totalLevels,
+    }
   })
 
   const regionEmojis: Record<string, string> = {
@@ -31,13 +42,13 @@ export default async function RegionPage() {
         {/* Header */}
         <div className="mb-8">
           <SoundLink href="/" className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)] hover:text-[var(--accent-green)] transition-colors mb-5">
-            ← Kembali ke Menu
+            {t('← Kembali ke Menu')}
           </SoundLink>
           <div className="flex items-center gap-3">
             <span className="text-3xl">🗺️</span>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Adventure Mode</h1>
-              <p className="text-xs text-[var(--text-muted)]">Pilih wilayah untuk memulai misi</p>
+              <h1 className="text-2xl font-bold text-foreground">{t('Mode Petualangan')}</h1>
+              <p className="text-xs text-[var(--text-muted)]">{t('Pilih wilayah untuk memulai misi')}</p>
             </div>
           </div>
         </div>
@@ -66,7 +77,9 @@ export default async function RegionPage() {
 
                     {/* Region number badge */}
                     <div className="absolute top-3 left-3">
-                      <span className="badge badge-teal">Region {idx + 1}</span>
+                      <span className="badge badge-teal">
+                        {t('Wilayah {number}', { number: idx + 1 })}
+                      </span>
                     </div>
 
                     {/* Lock overlay */}
@@ -74,7 +87,7 @@ export default async function RegionPage() {
                       <div className="locked-overlay absolute inset-0 flex items-center justify-center">
                         <div className="text-center">
                           <div className="text-3xl mb-1">🔒</div>
-                          <p className="text-xs text-[var(--text-muted)]">Selesaikan region sebelumnya</p>
+                          <p className="text-xs text-[var(--text-muted)]">{t('Selesaikan region sebelumnya')}</p>
                         </div>
                       </div>
                     )}
@@ -82,7 +95,7 @@ export default async function RegionPage() {
                     {/* Completion badge */}
                     {region.completionPct === 100 && (
                       <div className="absolute top-3 right-3">
-                        <span className="badge badge-amber">✓ SELESAI</span>
+                        <span className="badge badge-amber">{t('✓ SELESAI')}</span>
                       </div>
                     )}
                   </div>
@@ -105,7 +118,12 @@ export default async function RegionPage() {
                     {/* Progress */}
                     <div className="mb-4">
                       <div className="flex justify-between text-xs mb-1.5">
-                        <span className="text-[var(--text-muted)]">{region.completedCount}/{region.totalLevels} misi</span>
+                        <span className="text-[var(--text-muted)]">
+                          {t('{completed}/{total} misi', {
+                            completed: region.completedCount,
+                            total: region.totalLevels,
+                          })}
+                        </span>
                         <span className={region.completionPct > 0 ? 'text-[var(--accent-teal)]' : 'text-[var(--text-muted)]'}>
                           {region.completionPct}%
                         </span>
@@ -118,12 +136,12 @@ export default async function RegionPage() {
                     {/* Button */}
                     {isLocked ? (
                       <button className="eco-btn-secondary w-full py-2.5 text-xs cursor-not-allowed opacity-50">
-                        🔒 Terkunci
+                        {t('🔒 Terkunci')}
                       </button>
                     ) : (
                       <SoundLink href={`/mission/${region.id}`} className="block" sound="start">
                         <button className="eco-btn-primary w-full py-2.5 text-sm">
-                          {region.completionPct > 0 ? '▶ Lanjutkan' : '▶ Mulai'}
+                          {region.completionPct > 0 ? t('▶ Lanjutkan') : t('▶ Mulai')}
                         </button>
                       </SoundLink>
                     )}
@@ -138,8 +156,16 @@ export default async function RegionPage() {
         <div className="mt-8 eco-card p-4 flex items-center gap-3">
           <span className="text-2xl">💡</span>
           <div>
-            <p className="text-sm text-foreground font-medium">Tips</p>
-            <p className="text-xs text-[var(--text-muted)]">Selesaikan semua misi di West Java untuk membuka Central Java. Kumpulkan XP sebanyak mungkin!</p>
+            <p className="text-sm text-foreground font-medium">{t('Tips')}</p>
+            <p className="text-xs text-[var(--text-muted)]">
+              {t(
+                'Selesaikan semua misi di {region} untuk membuka {next}. Kumpulkan XP sebanyak mungkin!',
+                {
+                  region: regionDisplayName('west-java', language),
+                  next: regionDisplayName('central-java', language),
+                }
+              )}
+            </p>
           </div>
         </div>
       </div>

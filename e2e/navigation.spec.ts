@@ -11,11 +11,11 @@ test('guest can navigate from home to gameplay and back', async ({ page }) => {
   await page.goto('/')
   await page.locator('a[href="/region"]').click()
   await expect(page).toHaveURL(/\/region$/)
-  await expect(page.getByRole('heading', { name: 'Adventure Mode' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Mode Petualangan' })).toBeVisible()
 
   await page.locator('a[href="/mission/west-java"]').click()
   await expect(page).toHaveURL(/\/mission\/west-java$/)
-  await expect(page.getByText('River Cleanup Initiative')).toBeVisible()
+  await expect(page.getByText('Inisiatif Pembersihan Sungai')).toBeVisible()
 
   await page.locator('a[href="/briefing/west-java/1"]').click()
   await expect(page).toHaveURL(/\/briefing\/west-java\/1$/)
@@ -39,9 +39,9 @@ test('home tutorial can be reopened manually', async ({ page }) => {
   await expect(page.getByText('1 / 8')).toBeVisible()
 
   await page.getByRole('button', { name: 'Lanjut →' }).click()
-  await expect(page.getByText('Pilih Mode Adventure')).toBeVisible()
+  await expect(page.getByText('Pilih Mode Petualangan')).toBeVisible()
 
   await page.getByRole('button', { name: '← Kembali' }).click()
   await page.getByRole('button', { name: 'Lewati' }).click()
-  await expect(page.getByText('Pilih Mode Adventure')).not.toBeVisible()
+  await expect(page.getByText('Pilih Mode Petualangan')).not.toBeVisible()
 })

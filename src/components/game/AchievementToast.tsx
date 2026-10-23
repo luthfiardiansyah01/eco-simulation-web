@@ -2,16 +2,20 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import { Achievement } from '@/types'
-import { usePreferences } from '@/components/settings/PreferencesProvider'
+import { usePreferences, useI18n } from '@/components/settings/PreferencesProvider'
+import { localizeAchievement } from '@/lib/i18n-content'
 
 export default function AchievementToast({ achievements }: { achievements: Achievement[] }) {
   const { notifications } = usePreferences()
+  const { language, t } = useI18n()
   if (!notifications) return null
 
   return (
     <div className="fixed top-4 right-4 z-50 flex flex-col gap-2">
       <AnimatePresence>
-        {achievements.map((a) => (
+        {achievements.map((achievement) => {
+          const a = localizeAchievement(achievement, language)
+          return (
           <motion.div
             key={a.id}
             initial={{ opacity: 0, x: 80 }}
@@ -22,12 +26,13 @@ export default function AchievementToast({ achievements }: { achievements: Achie
           >
             <span className="text-2xl">{a.icon}</span>
             <div>
-              <p className="text-yellow-400 font-bold tracking-widest">ACHIEVEMENT UNLOCKED</p>
+              <p className="text-yellow-400 font-bold tracking-widest">{t('PENCAPAIAN TERBUKA')}</p>
               <p className="text-white">{a.title}</p>
               <p className="text-gray-400">{a.description}</p>
             </div>
           </motion.div>
-        ))}
+          )
+        })}
       </AnimatePresence>
     </div>
   )

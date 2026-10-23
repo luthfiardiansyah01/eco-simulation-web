@@ -6,10 +6,12 @@ import { useRouter } from 'next/navigation'
 import type { EmailOtpType } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import AuthErrorBoundary from '@/components/errors/AuthErrorBoundary'
+import { useI18n } from '@/components/settings/PreferencesProvider'
+import type { Translator } from '@/lib/i18n'
 
 type RecoveryState = 'loading' | 'error'
 
-function recoveryErrorMessage(message: string) {
+function recoveryErrorMessage(message: string, t: Translator) {
   const normalized = message.toLowerCase()
 
   if (
@@ -17,16 +19,19 @@ function recoveryErrorMessage(message: string) {
     normalized.includes('flow state') ||
     normalized.includes('invalid flow')
   ) {
-    return 'Tautan reset harus dibuka di browser yang sama dengan saat meminta reset. Minta kode baru dari browser ini, atau gunakan kode 6 digit.'
+    return t(
+      'Tautan reset harus dibuka di browser yang sama dengan saat meminta reset. Minta kode baru dari browser ini, atau gunakan kode 6 digit.'
+    )
   }
   if (normalized.includes('expired') || normalized.includes('invalid')) {
-    return 'Tautan reset tidak valid atau sudah kedaluwarsa. Minta tautan atau kode baru.'
+    return t('Tautan reset tidak valid atau sudah kedaluwarsa. Minta tautan atau kode baru.')
   }
   return message
 }
 
 function RecoveryLinkContent() {
   const router = useRouter()
+  const { t } = useI18n()
   const startedRef = useRef(false)
   const [state, setState] = useState<RecoveryState>('loading')
   const [error, setError] = useState('')
@@ -44,7 +49,7 @@ function RecoveryLinkContent() {
         const linkError = url.searchParams.get('error_description')
           ?? url.searchParams.get('error')
         if (linkError) {
-          setError(recoveryErrorMessage(linkError))
+          setError(recoveryErrorMessage(linkError, t))
           setState('error')
           return
         }
@@ -59,7 +64,7 @@ function RecoveryLinkContent() {
           })
 
           if (sessionError) {
-            setError(recoveryErrorMessage(sessionError.message))
+            setError(recoveryErrorMessage(sessionError.message, t))
             setState('error')
             return
           }
@@ -79,7 +84,7 @@ function RecoveryLinkContent() {
           })
 
           if (verifyError) {
-            setError(recoveryErrorMessage(verifyError.message))
+            setError(recoveryErrorMessage(verifyError.message, t))
             setState('error')
             return
           }
@@ -95,7 +100,7 @@ function RecoveryLinkContent() {
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 
           if (exchangeError) {
-            setError(recoveryErrorMessage(exchangeError.message))
+            setError(recoveryErrorMessage(exchangeError.message, t))
             setState('error')
             return
           }
@@ -116,17 +121,17 @@ function RecoveryLinkContent() {
           return
         }
 
-        setError('Tautan reset tidak memuat token yang valid. Minta tautan atau kode baru.')
+        setError(t('Tautan reset tidak memuat token yang valid. Minta tautan atau kode baru.'))
         setState('error')
       } catch (err) {
         console.error('Recovery link handling failed:', err)
-        setError('Terjadi kesalahan saat memproses tautan reset. Coba lagi.')
+        setError(t('Terjadi kesalahan saat memproses tautan reset. Coba lagi.'))
         setState('error')
       }
     }
 
     void completeRecovery()
-  }, [router])
+  }, [router, t])
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
@@ -146,17 +151,17 @@ function RecoveryLinkContent() {
             <>
               <div className="text-3xl mb-3 animate-pulse">🔐</div>
               <h2 className="text-sm font-semibold text-foreground mb-1">
-                Memverifikasi tautan reset...
+                {t('Memverifikasi tautan reset...')}
               </h2>
               <p className="text-xs text-[var(--text-muted)]">
-                Mohon tunggu sebentar.
+                {t('Mohon tunggu sebentar.')}
               </p>
             </>
           ) : (
             <>
               <div className="text-3xl mb-3">⚠️</div>
               <h2 className="text-sm font-semibold text-[var(--accent-red)] mb-2">
-                Tautan reset tidak dapat digunakan
+                {t('Tautan reset tidak dapat digunakan')}
               </h2>
               <p
                 role="alert"
@@ -169,13 +174,13 @@ function RecoveryLinkContent() {
                   href="/forgot-password"
                   className="eco-btn-primary w-full py-2.5 text-sm"
                 >
-                  Minta Kode Baru
+                  {t('Minta Kode Baru')}
                 </Link>
                 <Link
                   href="/login"
                   className="eco-btn-secondary w-full py-2.5 text-sm"
                 >
-                  ← Kembali ke Masuk
+                  {t('← Kembali ke Masuk')}
                 </Link>
               </div>
             </>
@@ -187,12 +192,16 @@ function RecoveryLinkContent() {
 }
 
 export default function RecoveryLinkPage() {
+  const { t } = useI18n()
+
   return (
     <AuthErrorBoundary
-      title="Tautan reset gagal diproses"
-      description="Terjadi kesalahan saat memproses tautan reset. Minta kode verifikasi baru atau kembali ke halaman masuk."
+      title={t('Tautan reset gagal diproses')}
+      description={t(
+        'Terjadi kesalahan saat memproses tautan reset. Minta kode verifikasi baru atau kembali ke halaman masuk.'
+      )}
       backHref="/forgot-password"
-      backLabel="Minta Kode Baru"
+      backLabel={t('Minta Kode Baru')}
     >
       <RecoveryLinkContent />
     </AuthErrorBoundary>

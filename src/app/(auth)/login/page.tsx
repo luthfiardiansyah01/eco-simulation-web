@@ -1,5 +1,6 @@
 import LoginForm from './LoginForm'
 import AuthErrorBoundary from '@/components/errors/AuthErrorBoundary'
+import { getTranslator } from '@/lib/i18n-server'
 
 const ERROR_MESSAGES: Record<string, string> = {
   auth_callback_failed:
@@ -16,17 +17,20 @@ export default async function LoginPage({
   searchParams: Promise<{ error?: string; message?: string }>
 }) {
   const { error, message } = await searchParams
+  const { t } = await getTranslator()
   const initialError = error
-    ? ERROR_MESSAGES[error] ?? 'Terjadi kesalahan autentikasi.'
+    ? t(ERROR_MESSAGES[error] ?? 'Terjadi kesalahan autentikasi.')
     : ''
-  const initialMessage = message ? STATUS_MESSAGES[message] ?? '' : ''
+  const initialMessage = message ? t(STATUS_MESSAGES[message] ?? '') : ''
 
   return (
     <AuthErrorBoundary
-      title="Halaman masuk gagal dimuat"
-      description="Terjadi kesalahan saat memuat form masuk. Coba lagi atau kembali ke beranda."
+      title={t('Halaman masuk gagal dimuat')}
+      description={t(
+        'Terjadi kesalahan saat memuat form masuk. Coba lagi atau kembali ke beranda.'
+      )}
       backHref="/"
-      backLabel="← Kembali ke Beranda"
+      backLabel={t('← Kembali ke Beranda')}
     >
       <LoginForm
         key={`${initialError}-${initialMessage}`}

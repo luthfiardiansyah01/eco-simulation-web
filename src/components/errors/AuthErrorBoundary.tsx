@@ -2,6 +2,7 @@
 
 import { catchError, type ErrorInfo } from 'next/error'
 import ErrorFallback from './ErrorFallback'
+import { useI18n } from '@/components/settings/PreferencesProvider'
 
 type AuthErrorBoundaryProps = {
   title?: string
@@ -21,21 +22,28 @@ function getDigest(error: unknown) {
 
 function AuthErrorFallback(
   {
-    title = 'Halaman gagal dimuat',
-    description = 'Terjadi kesalahan saat memuat halaman autentikasi. Coba lagi atau kembali ke halaman masuk.',
+    title,
+    description,
     backHref = '/login',
-    backLabel = '← Kembali ke Masuk',
+    backLabel,
   }: AuthErrorBoundaryProps,
   { error, retry }: ErrorInfo
 ) {
+  const { t } = useI18n()
+
   return (
     <ErrorFallback
-      title={title}
-      description={description}
+      title={title ?? t('Halaman gagal dimuat')}
+      description={
+        description ??
+        t(
+          'Terjadi kesalahan saat memuat halaman autentikasi. Coba lagi atau kembali ke halaman masuk.'
+        )
+      }
       digest={getDigest(error)}
       onRetry={retry}
       backHref={backHref}
-      backLabel={backLabel}
+      backLabel={backLabel ?? t('← Kembali ke Masuk')}
     />
   )
 }

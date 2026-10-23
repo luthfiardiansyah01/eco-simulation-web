@@ -1,4 +1,5 @@
 import type { EnvironmentStatus, EventLog, GameAction } from '@/types'
+import { translate, type Language } from '@/lib/i18n'
 
 export type ActionCost = { credits?: number; energy?: number }
 
@@ -30,7 +31,8 @@ export function applyAction(
   action: GameAction,
   label: string,
   treeTarget: number,
-  droneTarget: number
+  droneTarget: number,
+  language: Language = 'id'
 ): { status: EnvironmentStatus; message: string; type: EventLog['type'] } {
   const cost = ACTION_COSTS[action]
   const next: EnvironmentStatus = {
@@ -39,7 +41,7 @@ export function applyAction(
     energy: prev.energy - (cost.energy ?? 0),
   }
 
-  let message = `Aksi: ${label}`
+  let message = translate(language, 'Aksi: {label}', { label })
   let type: EventLog['type'] = 'info'
 
   switch (action) {
@@ -48,31 +50,39 @@ export function applyAction(
       if (next.pollution < prev.pollution) {
         next.fishPopulation = Math.min(100, prev.fishPopulation + 3)
       }
-      message = 'Sampah dibersihkan'
+      message = translate(language, 'Sampah dibersihkan')
       type = 'success'
       break
     case 'plant_tree':
       next.trees = prev.trees + 1
       next.biodiversity = Math.min(100, prev.biodiversity + 2)
-      message = `Pohon ditanam (${next.trees}/${treeTarget})`
+      message = translate(language, 'Pohon ditanam ({count}/{target})', {
+        count: next.trees,
+        target: treeTarget,
+      })
       type = 'success'
       break
     case 'scan_water':
-      message = `Kualitas air: ${prev.waterQuality}%`
+      message = translate(language, 'Kualitas air: {quality}%', {
+        quality: prev.waterQuality,
+      })
       break
     case 'deploy_drone':
       next.drones = prev.drones + 1
-      message = `Drone diterbangkan (${next.drones}/${droneTarget})`
+      message = translate(language, 'Drone diterbangkan ({count}/{target})', {
+        count: next.drones,
+        target: droneTarget,
+      })
       type = 'success'
       break
     case 'build_filter':
       next.waterQuality = Math.min(100, prev.waterQuality + 8)
       next.fishPopulation = Math.min(100, prev.fishPopulation + 5)
-      message = 'Filter terpasang — ikan mulai kembali'
+      message = translate(language, 'Filter terpasang — ikan mulai kembali')
       type = 'success'
       break
     default:
-      message = `Aksi: ${label}`
+      message = translate(language, 'Aksi: {label}', { label })
   }
 
   return { status: next, message, type }

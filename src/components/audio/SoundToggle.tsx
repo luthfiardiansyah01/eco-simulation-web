@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import { useSound } from '@/components/audio/SoundProvider'
+import { useI18n } from '@/components/settings/PreferencesProvider'
 
 interface Props {
   /** Position the toggle at the top-right of the viewport. */
@@ -11,12 +12,13 @@ interface Props {
 
 export default function SoundToggle({ floating = true, className = '' }: Props) {
   const { muted, toggleMuted } = useSound()
+  const { t } = useI18n()
   const pathname = usePathname()
 
   // Gameplay has its own toggle in the top bar so it never covers the map.
   if (floating && pathname.startsWith('/play/')) return null
 
-  const label = muted ? 'Aktifkan suara & musik' : 'Matikan suara & musik'
+  const label = muted ? t('Aktifkan suara & musik') : t('Matikan suara & musik')
 
   return (
     <button

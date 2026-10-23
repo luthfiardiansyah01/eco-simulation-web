@@ -7,23 +7,30 @@ import ServiceWorkerRegistration from '@/components/pwa/ServiceWorkerRegistratio
 import SoundProvider from '@/components/audio/SoundProvider'
 import SoundToggle from '@/components/audio/SoundToggle'
 import PreferencesProvider from '@/components/settings/PreferencesProvider'
+import { getLanguage, getTranslator } from '@/lib/i18n-server'
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] })
 
-export const metadata: Metadata = {
-  title: 'VRASS — Virtual River Awareness Simulation System',
-  description: 'Adventure game simulasi ekosistem sungai. Selesaikan misi pemulihan lingkungan di 3 wilayah Jawa.',
-  applicationName: 'VRASS',
-  manifest: '/manifest.json',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: 'VRASS',
-  },
-  icons: {
-    apple: '/icons/icon-192x192.png',
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslator()
+
+  return {
+    title: 'VRASS — Virtual River Awareness Simulation System',
+    description: t(
+      'Adventure game simulasi ekosistem sungai. Selesaikan misi pemulihan lingkungan di 3 wilayah Jawa.'
+    ),
+    applicationName: 'VRASS',
+    manifest: '/manifest.json',
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: 'default',
+      title: 'VRASS',
+    },
+    icons: {
+      apple: '/icons/icon-192x192.png',
+    },
+  }
 }
 
 export const viewport: Viewport = {
@@ -32,10 +39,12 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const language = await getLanguage()
+
   return (
     <html
-      lang="id"
+      lang={language}
       data-theme="dark"
       className={`${geistSans.variable} ${geistMono.variable} h-full`}
       suppressHydrationWarning
@@ -49,7 +58,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body className="min-h-full bg-background text-foreground antialiased">
         <SoundProvider>
-          <PreferencesProvider>
+          <PreferencesProvider initialLanguage={language}>
             <OrientationGuard />
             <ServiceWorkerRegistration />
             <SoundToggle />

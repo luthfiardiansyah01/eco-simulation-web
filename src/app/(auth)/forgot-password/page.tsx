@@ -1,5 +1,6 @@
 import ForgotPasswordForm from './ForgotPasswordForm'
 import AuthErrorBoundary from '@/components/errors/AuthErrorBoundary'
+import { getTranslator } from '@/lib/i18n-server'
 
 const ERROR_MESSAGES: Record<string, string> = {
   invalid_code:
@@ -14,14 +15,17 @@ export default async function ForgotPasswordPage({
   searchParams: Promise<{ error?: string }>
 }) {
   const { error } = await searchParams
+  const { t } = await getTranslator()
   const initialError = error
-    ? ERROR_MESSAGES[error] ?? 'Terjadi kesalahan. Coba lagi.'
+    ? t(ERROR_MESSAGES[error] ?? 'Terjadi kesalahan. Coba lagi.')
     : ''
 
   return (
     <AuthErrorBoundary
-      title="Halaman pemulihan gagal dimuat"
-      description="Terjadi kesalahan saat memuat form pemulihan password. Coba lagi atau kembali ke halaman masuk."
+      title={t('Halaman pemulihan gagal dimuat')}
+      description={t(
+        'Terjadi kesalahan saat memuat form pemulihan password. Coba lagi atau kembali ke halaman masuk.'
+      )}
     >
       <ForgotPasswordForm initialError={initialError} />
     </AuthErrorBoundary>

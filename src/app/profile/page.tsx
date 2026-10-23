@@ -5,8 +5,12 @@ import SoundLink from '@/components/audio/SoundLink'
 import { Achievement, UserAchievement } from '@/types'
 import { getAllAchievements, getUserAchievements } from '@/lib/supabase/achievements'
 import { createClient } from '@/lib/supabase/client'
+import { useI18n } from '@/components/settings/PreferencesProvider'
+import { localizeAchievement } from '@/lib/i18n-content'
+import { formatDate } from '@/lib/i18n'
 
 export default function ProfilePage() {
+  const { language, t } = useI18n()
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([])
   const [username, setUsername] = useState<string>('')
@@ -22,13 +26,13 @@ export default function ProfilePage() {
         const { data: { user } } = await supabase.auth.getUser()
         const [all, unlocked] = await Promise.all([getAllAchievements(), getUserAchievements()])
         if (cancelled) return
-        if (user) setUsername(user.email?.split('@')[0] ?? 'Player')
+        if (user) setUsername(user.email?.split('@')[0] ?? t('Player'))
         setAchievements(all)
         setUserAchievements(unlocked)
       } catch (err) {
         if (!cancelled) {
           console.error('Failed to load profile', err)
-          setError('Gagal memuat achievement. Coba muat ulang halaman.')
+          setError(t('Gagal memuat achievement. Coba muat ulang halaman.'))
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -37,7 +41,7 @@ export default function ProfilePage() {
 
     void load()
     return () => { cancelled = true }
-  }, [])
+  }, [t])
 
   const unlockedIds = new Set(userAchievements.map((u) => u.achievementId))
   const unlockedCount = unlockedIds.size
@@ -58,10 +62,10 @@ export default function ProfilePage() {
         {/* Back */}
         <div className="flex items-center justify-between gap-3 mb-5">
           <SoundLink href="/" className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)] hover:text-[var(--accent-green)] transition-colors">
-            ← Kembali ke Menu
+            {t('← Kembali ke Menu')}
           </SoundLink>
           <SoundLink href="/leaderboard" className="badge badge-amber text-[10px] hover:opacity-80 transition-opacity">
-            🏆 Leaderboard
+            🏆 {t('Leaderboard')}
           </SoundLink>
         </div>
 
@@ -74,10 +78,10 @@ export default function ProfilePage() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
-                <h1 className="text-lg font-bold text-foreground truncate">{username || 'Player'}</h1>
+                <h1 className="text-lg font-bold text-foreground truncate">{username || t('Player')}</h1>
                 <span className={`badge ${rankInfo.color}`}>{rankInfo.emoji} {rankInfo.label}</span>
               </div>
-              <p className="text-xs text-[var(--text-muted)]">Eco Researcher · EcoSim</p>
+              <p className="text-xs text-[var(--text-muted)]">{t('Eco Researcher · EcoSim')}</p>
             </div>
           </div>
         </div>
@@ -85,9 +89,9 @@ export default function ProfilePage() {
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-3 mb-5">
           {[
-            { label: 'Achievement', value: `${unlockedCount}/${achievements.length}`, emoji: '🏆', color: 'var(--accent-amber)' },
-            { label: 'Completion', value: `${pct}%`, emoji: '📊', color: 'var(--accent-teal)' },
-            { label: 'Status', value: 'Aktif', emoji: '🌱', color: 'var(--accent-green)' },
+            { label: t('Pencapaian'), value: `${unlockedCount}/${achievements.length}`, emoji: '🏆', color: 'var(--accent-amber)' },
+            { label: t('Completion'), value: `${pct}%`, emoji: '📊', color: 'var(--accent-teal)' },
+            { label: t('Status'), value: t('Aktif'), emoji: '🌱', color: 'var(--accent-green)' },
           ].map(({ label, value, emoji, color }) => (
             <div key={label} className="eco-card p-3 text-center">
               <span className="text-xl">{emoji}</span>
@@ -100,7 +104,7 @@ export default function ProfilePage() {
         {/* Achievement progress bar */}
         <div className="eco-card p-4 mb-5">
           <div className="flex justify-between text-xs mb-2">
-            <span className="text-[var(--text-muted)]">Progress Achievement</span>
+            <span className="text-[var(--text-muted)]">{t('Progres Pencapaian')}</span>
             <span className="text-[var(--accent-amber)] font-bold">{pct}%</span>
           </div>
           <div className="progress-bar-bg h-2">
@@ -109,7 +113,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Achievement grid */}
-        <h2 className="text-xs text-[var(--text-muted)] uppercase tracking-widest mb-3">Daftar Achievement</h2>
+        <h2 className="text-xs text-[var(--text-muted)] uppercase tracking-widest mb-3">{t('Daftar Pencapaian')}</h2>
 
         {error ? (
           <div className="eco-card p-4 text-xs" style={{ color: 'var(--accent-red)' }}>
@@ -118,11 +122,12 @@ export default function ProfilePage() {
         ) : loading ? (
           <div className="eco-card p-8 text-center">
             <span className="text-2xl float">⏳</span>
-            <p className="text-sm text-[var(--text-muted)] mt-2">Memuat achievement...</p>
+            <p className="text-sm text-[var(--text-muted)] mt-2">{t('Memuat achievement...')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {achievements.map((a) => {
+            {achievements.map((achievement) => {
+              const a = localizeAchievement(achievement, language)
               const unlocked = unlockedIds.has(a.id)
               const unlockedAt = userAchievements.find((u) => u.achievementId === a.id)?.unlockedAt
               return (
@@ -138,12 +143,12 @@ export default function ProfilePage() {
                     <p className="text-[11px] text-[var(--text-muted)] truncate">{a.description}</p>
                     {unlocked && unlockedAt && (
                       <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
-                        🗓 {new Date(unlockedAt).toLocaleDateString('id-ID')}
+                        🗓 {formatDate(unlockedAt, language)}
                       </p>
                     )}
                   </div>
                   {unlocked
-                    ? <span className="badge badge-amber text-[9px] flex-shrink-0">✓ UNLOCK</span>
+                    ? <span className="badge badge-amber text-[9px] flex-shrink-0">{t('✓ UNLOCK')}</span>
                     : <span className="badge badge-gray text-[9px] flex-shrink-0">🔒</span>
                   }
                 </div>

@@ -1,7 +1,35 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import Link from 'next/link'
+import {
+  DEFAULT_LANGUAGE,
+  LANGUAGE_COOKIE,
+  normalizeLanguage,
+  translate,
+  type Language,
+  type TranslationVars,
+} from '@/lib/i18n'
+
+function subscribeToLanguage() {
+  return () => undefined
+}
+
+function getLanguageSnapshot(): Language {
+  try {
+    const value = document.cookie
+      .split('; ')
+      .find((row) => row.startsWith(`${LANGUAGE_COOKIE}=`))
+      ?.split('=')[1]
+    return normalizeLanguage(value)
+  } catch {
+    return DEFAULT_LANGUAGE
+  }
+}
+
+function getServerLanguageSnapshot(): Language {
+  return DEFAULT_LANGUAGE
+}
 
 export default function GlobalError({
   error,
@@ -10,12 +38,21 @@ export default function GlobalError({
   error: Error & { digest?: string }
   retry: () => void
 }) {
+  const language = useSyncExternalStore(
+    subscribeToLanguage,
+    getLanguageSnapshot,
+    getServerLanguageSnapshot
+  )
+
   useEffect(() => {
     console.error('Global application error:', error)
   }, [error])
 
+  const t = (source: string, vars?: TranslationVars) =>
+    translate(language, source, vars)
+
   return (
-    <html lang="id">
+    <html lang={language}>
       <body
         style={{
           margin: 0,
@@ -31,7 +68,7 @@ export default function GlobalError({
             'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         }}
       >
-        <title>Terjadi kesalahan — VRASS</title>
+        <title>{t('Terjadi kesalahan — VRASS')}</title>
         <div
           style={{
             width: '100%',
@@ -47,7 +84,7 @@ export default function GlobalError({
         >
           <div style={{ fontSize: 34, marginBottom: 12 }}>⚠️</div>
           <h1 style={{ margin: '0 0 10px', fontSize: 18 }}>
-            Terjadi kesalahan
+            {t('Terjadi kesalahan')}
           </h1>
           <p
             style={{
@@ -57,7 +94,7 @@ export default function GlobalError({
               color: '#9fc9b4',
             }}
           >
-            Aplikasi gagal dimuat. Coba lagi, atau kembali ke beranda.
+            {t('Aplikasi gagal dimuat. Coba lagi, atau kembali ke beranda.')}
           </p>
           {error.digest && (
             <p
@@ -69,7 +106,7 @@ export default function GlobalError({
                 wordBreak: 'break-all',
               }}
             >
-              Kode kesalahan: {error.digest}
+              {t('Kode kesalahan: {digest}', { digest: error.digest })}
             </p>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -88,7 +125,7 @@ export default function GlobalError({
                 background: 'linear-gradient(135deg, #16a34a, #0d9488)',
               }}
             >
-              🔄 Coba Lagi
+              {t('🔄 Coba Lagi')}
             </button>
             <Link
               href="/"
@@ -103,7 +140,7 @@ export default function GlobalError({
                 fontSize: 13,
               }}
             >
-              ← Kembali ke Beranda
+              {t('← Kembali ke Beranda')}
             </Link>
           </div>
         </div>

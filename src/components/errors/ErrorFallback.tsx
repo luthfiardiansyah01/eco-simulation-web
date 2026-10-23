@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useI18n } from '@/components/settings/PreferencesProvider'
 
 export default function ErrorFallback({
   title,
@@ -8,7 +9,7 @@ export default function ErrorFallback({
   digest,
   onRetry,
   backHref = '/',
-  backLabel = 'Kembali ke Beranda',
+  backLabel,
 }: {
   title: string
   description: string
@@ -17,6 +18,9 @@ export default function ErrorFallback({
   backHref?: string
   backLabel?: string
 }) {
+  const { t } = useI18n()
+  const resolvedBackLabel = backLabel ?? t('Kembali ke Beranda')
+
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
       <div className="absolute top-[-80px] left-[-80px] w-64 h-64 rounded-full bg-green-900/20 blur-3xl pointer-events-none" />
@@ -44,7 +48,7 @@ export default function ErrorFallback({
 
           {digest && (
             <p className="text-[10px] text-[var(--text-muted)] font-mono break-all mb-4">
-              Kode kesalahan: {digest}
+              {t('Kode kesalahan: {digest}', { digest })}
             </p>
           )}
 
@@ -54,13 +58,13 @@ export default function ErrorFallback({
               onClick={() => onRetry()}
               className="eco-btn-primary w-full py-2.5 text-sm"
             >
-              🔄 Coba Lagi
+              {t('🔄 Coba Lagi')}
             </button>
             <Link
               href={backHref}
               className="eco-btn-secondary w-full py-2.5 text-sm"
             >
-              {backLabel}
+              {resolvedBackLabel}
             </Link>
           </div>
         </div>

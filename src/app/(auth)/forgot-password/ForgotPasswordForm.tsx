@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useSound } from '@/components/audio/SoundProvider'
+import { useI18n } from '@/components/settings/PreferencesProvider'
+import type { Translator } from '@/lib/i18n'
 
 type RecoveryStep = 'email' | 'code'
 
@@ -14,14 +16,14 @@ function normalizeEmail(value: string) {
   return value.trim().toLowerCase()
 }
 
-function friendlyAuthError(message: string) {
+function friendlyAuthError(message: string, t: Translator) {
   const normalized = message.toLowerCase()
 
   if (normalized.includes('expired') || normalized.includes('invalid')) {
-    return 'Kode tidak valid atau sudah kedaluwarsa. Coba kirim ulang kode.'
+    return t('Kode tidak valid atau sudah kedaluwarsa. Coba kirim ulang kode.')
   }
   if (normalized.includes('rate limit') || normalized.includes('too many')) {
-    return 'Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.'
+    return t('Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.')
   }
   return message
 }
@@ -33,6 +35,7 @@ export default function ForgotPasswordForm({
 }) {
   const router = useRouter()
   const { play } = useSound()
+  const { t } = useI18n()
   const [step, setStep] = useState<RecoveryStep>('email')
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
@@ -63,7 +66,7 @@ export default function ForgotPasswordForm({
     )
 
     if (resetError) {
-      setError(friendlyAuthError(resetError.message))
+      setError(friendlyAuthError(resetError.message, t))
       play('error')
       return false
     }
@@ -74,8 +77,11 @@ export default function ForgotPasswordForm({
     setError('')
     setMessage(
       isResend
-        ? `Kode baru telah dikirim ke ${targetEmail}.`
-        : `Kode verifikasi 6 digit telah dikirim ke ${targetEmail}. Cek inbox dan folder spam.`
+        ? t('Kode baru telah dikirim ke {email}.', { email: targetEmail })
+        : t(
+            'Kode verifikasi 6 digit telah dikirim ke {email}. Cek inbox dan folder spam.',
+            { email: targetEmail }
+          )
     )
     setResendCooldown(RESEND_SECONDS)
     play('success')
@@ -93,7 +99,7 @@ export default function ForgotPasswordForm({
       await sendResetCode(normalizeEmail(email))
     } catch (err) {
       console.error('Password reset request failed:', err)
-      setError('Terjadi kesalahan. Coba lagi.')
+      setError(t('Terjadi kesalahan. Coba lagi.'))
       play('error')
     } finally {
       setLoading(false)
@@ -107,7 +113,7 @@ export default function ForgotPasswordForm({
     setMessage('')
 
     if (!/^\d{6}$/.test(code)) {
-      setError('Masukkan kode verifikasi 6 digit dari email.')
+      setError(t('Masukkan kode verifikasi 6 digit dari email.'))
       play('error')
       return
     }
@@ -123,7 +129,7 @@ export default function ForgotPasswordForm({
       })
 
       if (verifyError) {
-        setError(friendlyAuthError(verifyError.message))
+        setError(friendlyAuthError(verifyError.message, t))
         play('error')
         return
       }
@@ -133,7 +139,7 @@ export default function ForgotPasswordForm({
       router.refresh()
     } catch (err) {
       console.error('Recovery code verification failed:', err)
-      setError('Terjadi kesalahan. Coba lagi.')
+      setError(t('Terjadi kesalahan. Coba lagi.'))
       play('error')
     } finally {
       setLoading(false)
@@ -152,7 +158,7 @@ export default function ForgotPasswordForm({
       await sendResetCode(normalizeEmail(email), true)
     } catch (err) {
       console.error('Password reset resend failed:', err)
-      setError('Terjadi kesalahan. Coba lagi.')
+      setError(t('Terjadi kesalahan. Coba lagi.'))
       play('error')
     } finally {
       setLoading(false)
@@ -185,25 +191,25 @@ export default function ForgotPasswordForm({
           </div>
           <p className="text-sm text-[var(--text-muted)]">
             {step === 'email'
-              ? 'Pulihkan akses ke akunmu'
-              : 'Masukkan kode verifikasi'}
+              ? t('Pulihkan akses ke akunmu')
+              : t('Masukkan kode verifikasi')}
           </p>
         </div>
 
         <div className="eco-card p-6">
           <div className="flex items-center justify-center gap-1.5 mb-5 text-[9px]">
-            <span className={stepClass(step === 'email')}>1 Email</span>
+            <span className={stepClass(step === 'email')}>{t('1 Email')}</span>
             <span className="text-[var(--text-muted)]">→</span>
-            <span className={stepClass(step === 'code')}>2 Kode</span>
+            <span className={stepClass(step === 'code')}>{t('2 Kode')}</span>
             <span className="text-[var(--text-muted)]">→</span>
-            <span className="text-[var(--text-muted)]">3 Password</span>
+            <span className="text-[var(--text-muted)]">{t('3 Password')}</span>
           </div>
 
           {step === 'email' ? (
             <form onSubmit={handleRequestCode} className="space-y-4">
               <div>
                 <label className="text-xs text-[var(--text-muted)] block mb-1.5 font-medium">
-                  Email akun
+                  {t('Email akun')}
                 </label>
                 <input
                   type="email"
@@ -212,7 +218,7 @@ export default function ForgotPasswordForm({
                   required
                   autoComplete="email"
                   className="w-full bg-[var(--input-bg)] border border-[var(--border-card)] rounded-lg px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-[var(--accent-green)] focus:ring-1 focus:ring-green-500/20 transition-colors placeholder:text-[var(--text-muted)]"
-                  placeholder="kamu@email.com"
+                  placeholder={t('kamu@email.com')}
                 />
               </div>
 
@@ -239,13 +245,13 @@ export default function ForgotPasswordForm({
                 disabled={loading}
                 className="eco-btn-primary w-full py-2.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? '⏳ Mengirim...' : '✉️ Kirim Kode Verifikasi'}
+                {loading ? t('⏳ Mengirim...') : t('✉️ Kirim Kode Verifikasi')}
               </button>
             </form>
           ) : (
             <form onSubmit={handleVerifyCode} className="space-y-4">
               <div className="text-center">
-                <p className="text-[10px] text-[var(--text-muted)]">Kode dikirim ke</p>
+                <p className="text-[10px] text-[var(--text-muted)]">{t('Kode dikirim ke')}</p>
                 <p className="text-xs font-medium text-foreground break-all mt-0.5">
                   {email}
                 </p>
@@ -254,13 +260,13 @@ export default function ForgotPasswordForm({
                   onClick={changeEmail}
                   className="text-[10px] text-[var(--accent-teal)] hover:underline mt-1"
                 >
-                  Ubah email
+                  {t('Ubah email')}
                 </button>
               </div>
 
               <div>
                 <label className="text-xs text-[var(--text-muted)] block mb-1.5 font-medium text-center">
-                  Kode 6 digit
+                  {t('Kode 6 digit')}
                 </label>
                 <input
                   type="text"
@@ -302,7 +308,7 @@ export default function ForgotPasswordForm({
                 disabled={loading || code.length !== 6}
                 className="eco-btn-primary w-full py-2.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? '⏳ Memverifikasi...' : '🔐 Verifikasi Kode'}
+                {loading ? t('⏳ Memverifikasi...') : t('🔐 Verifikasi Kode')}
               </button>
 
               <div className="text-center">
@@ -313,8 +319,10 @@ export default function ForgotPasswordForm({
                   className="text-[10px] text-[var(--accent-teal)] hover:underline disabled:text-[var(--text-muted)] disabled:no-underline disabled:cursor-not-allowed"
                 >
                   {resendCooldown > 0
-                    ? `Kirim ulang dalam ${resendCooldown} detik`
-                    : 'Kirim ulang kode'}
+                    ? t('Kirim ulang dalam {seconds} detik', {
+                        seconds: resendCooldown,
+                      })
+                    : t('Kirim ulang kode')}
                 </button>
               </div>
             </form>
@@ -327,7 +335,7 @@ export default function ForgotPasswordForm({
             className="text-xs text-[var(--text-muted)] hover:text-foreground transition-colors"
             onClick={() => play('click')}
           >
-            ← Kembali ke halaman masuk
+            {t('← Kembali ke halaman masuk')}
           </Link>
         </div>
       </div>

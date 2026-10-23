@@ -6,9 +6,11 @@ import { useState } from 'react'
 import OnboardingTutorial from '@/components/ui/OnboardingTutorial'
 import SoundLink from '@/components/audio/SoundLink'
 import { useSound } from '@/components/audio/SoundProvider'
+import { useI18n } from '@/components/settings/PreferencesProvider'
 
 export default function Home() {
   const { play } = useSound()
+  const { t } = useI18n()
   const [showTutorial, setShowTutorial] = useState(false)
 
   // Auto-show on first ever visit (checked client-side only)
@@ -33,16 +35,16 @@ export default function Home() {
             </h1>
             <span className="text-3xl float" style={{ animationDelay: '1s' }}>🌊</span>
           </div>
-          <p className="text-sm text-[var(--text-muted)] mb-4">River Ecosystem Simulation</p>
+          <p className="text-sm text-[var(--text-muted)] mb-4">{t('River Ecosystem Simulation')}</p>
           <div className="flex items-center justify-center gap-3 text-xs">
-            <span className="badge badge-green">● ONLINE</span>
+            <span className="badge badge-green">● {t('ONLINE')}</span>
             <AuthButton />
           </div>
         </div>
 
         {/* Mode label */}
         <p className="text-center text-xs tracking-widest text-[var(--text-muted)] uppercase mb-6">
-          — Pilih Mode Simulasi —
+          {t('— Pilih Mode Simulasi —')}
         </p>
 
         {/* Mode cards */}
@@ -53,28 +55,28 @@ export default function Home() {
             <div className="eco-card p-6 cursor-pointer h-full flex flex-col glow-pulse">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-2xl">🗺️</span>
-                <span className="badge badge-red">HARD</span>
+                <span className="badge badge-red">{t('SULIT')}</span>
               </div>
-              <h3 className="text-lg font-bold text-foreground mb-2">Adventure Mode</h3>
+              <h3 className="text-lg font-bold text-foreground mb-2">{t('Mode Petualangan')}</h3>
               <p className="text-sm text-[var(--text-muted)] mb-4 flex-1">
-                Selesaikan misi pemulihan ekosistem sungai di 3 wilayah Jawa dengan tantangan lingkungan dinamis.
+                {t('Selesaikan misi pemulihan ekosistem sungai di 3 wilayah Jawa dengan tantangan lingkungan dinamis.')}
               </p>
               <div className="space-y-2 mb-5 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-[var(--text-muted)]">Biomass</span>
+                  <span className="text-[var(--text-muted)]">{t('Biomassa')}</span>
                   <span className="text-[var(--accent-green)]">82%</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[var(--text-muted)]">Iklim</span>
-                  <span className="text-foreground">Dinamis</span>
+                  <span className="text-[var(--text-muted)]">{t('Iklim')}</span>
+                  <span className="text-foreground">{t('Dinamis')}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[var(--text-muted)]">Wilayah</span>
-                  <span className="text-[var(--accent-teal)]">3 Region</span>
+                  <span className="text-[var(--text-muted)]">{t('Wilayah')}</span>
+                  <span className="text-[var(--accent-teal)]">{t('3 Region')}</span>
                 </div>
               </div>
               <button className="eco-btn-primary w-full py-2.5 text-sm">
-                ▶ Mulai Petualangan
+                {t('▶ Mulai Petualangan')}
               </button>
             </div>
           </Link>
@@ -83,28 +85,28 @@ export default function Home() {
           <div className="eco-card p-6 opacity-50 flex flex-col">
             <div className="flex items-center justify-between mb-3">
               <span className="text-2xl">🏕️</span>
-              <span className="badge badge-green">RELAXED</span>
+              <span className="badge badge-green">{t('SANTAI')}</span>
             </div>
-            <h3 className="text-lg font-bold text-foreground mb-2">Classic Free Roam</h3>
+            <h3 className="text-lg font-bold text-foreground mb-2">{t('Jelajah Bebas Klasik')}</h3>
             <p className="text-sm text-[var(--text-muted)] mb-4 flex-1">
-              Jelajahi ekosistem secara bebas tanpa objektif. Kreasi sebebasnya seperti sandbox.
+              {t('Jelajahi ekosistem secara bebas tanpa objektif. Kreasi sebebasnya seperti sandbox.')}
             </p>
             <div className="space-y-2 mb-5 text-xs">
               <div className="flex justify-between">
-                <span className="text-[var(--text-muted)]">Biomass</span>
+                <span className="text-[var(--text-muted)]">{t('Biomassa')}</span>
                 <span className="text-[var(--accent-green)]">∞</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[var(--text-muted)]">Iklim</span>
-                <span className="text-foreground">Manual</span>
+                <span className="text-[var(--text-muted)]">{t('Iklim')}</span>
+                <span className="text-foreground">{t('Manual')}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[var(--text-muted)]">Wilayah</span>
-                <span className="text-[var(--accent-teal)]">Bebas</span>
+                <span className="text-[var(--text-muted)]">{t('Wilayah')}</span>
+                <span className="text-[var(--accent-teal)]">{t('Bebas')}</span>
               </div>
             </div>
             <button className="eco-btn-secondary w-full py-2.5 text-sm cursor-not-allowed opacity-60">
-              🔒 Segera Hadir
+              {t('🔒 Segera Hadir')}
             </button>
           </div>
         </div>
@@ -112,20 +114,20 @@ export default function Home() {
         {/* Footer hint */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-8 gap-3">
           <p className="text-xs text-[var(--text-muted)]">
-            Selamatkan ekosistem sungai Jawa 🌱
+            {t('Selamatkan ekosistem sungai Jawa 🌱')}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <SoundLink
               href="/leaderboard"
               className="badge badge-amber text-[10px] hover:opacity-80 transition-opacity"
             >
-              🏆 Leaderboard
+              🏆 {t('Leaderboard')}
             </SoundLink>
             <SoundLink
               href="/settings"
               className="badge badge-gray text-[10px] hover:opacity-80 transition-opacity"
             >
-              ⚙️ Pengaturan
+              {t('⚙️ Pengaturan')}
             </SoundLink>
             <button
               onClick={() => {
@@ -134,7 +136,7 @@ export default function Home() {
               }}
               className="badge badge-teal text-[10px] cursor-pointer hover:opacity-80 transition-opacity"
             >
-              ❓ Tutorial
+              {t('❓ Tutorial')}
             </button>
           </div>
         </div>

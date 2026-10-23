@@ -95,5 +95,5 @@ test('empty achievement catalog shows a zero state', async ({ page }) => {
 
   await expect(page.getByText('0/0')).toBeVisible()
   await expect(page.getByText('0%').first()).toBeVisible()
-  await expect(page.getByText('Daftar Achievement')).toBeVisible()
+  await expect(page.getByText('Daftar Pencapaian')).toBeVisible()
 })

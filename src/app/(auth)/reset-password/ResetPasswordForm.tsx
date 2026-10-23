@@ -5,24 +5,26 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useSound } from '@/components/audio/SoundProvider'
+import { useI18n } from '@/components/settings/PreferencesProvider'
+import type { Translator } from '@/lib/i18n'
 
-function friendlyAuthError(message: string) {
+function friendlyAuthError(message: string, t: Translator) {
   const normalized = message.toLowerCase()
 
   if (normalized.includes('expired') || normalized.includes('invalid')) {
-    return 'Sesi reset sudah tidak valid. Minta kode verifikasi baru.'
+    return t('Sesi reset sudah tidak valid. Minta kode verifikasi baru.')
   }
   if (normalized.includes('different from the old')) {
-    return 'Password baru harus berbeda dari password lama.'
+    return t('Password baru harus berbeda dari password lama.')
   }
   if (normalized.includes('weak') || normalized.includes('short')) {
-    return 'Password terlalu lemah atau terlalu pendek.'
+    return t('Password terlalu lemah atau terlalu pendek.')
   }
   if (normalized.includes('password')) {
-    return 'Password tidak memenuhi syarat.'
+    return t('Password tidak memenuhi syarat.')
   }
   if (normalized.includes('rate limit') || normalized.includes('too many')) {
-    return 'Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.'
+    return t('Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.')
   }
   return message
 }
@@ -30,6 +32,7 @@ function friendlyAuthError(message: string) {
 export default function ResetPasswordForm({ email }: { email: string }) {
   const router = useRouter()
   const { play } = useSound()
+  const { t } = useI18n()
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -44,13 +47,13 @@ export default function ResetPasswordForm({ email }: { email: string }) {
     setMessage('')
 
     if (password.length < 6) {
-      setError('Password minimal 6 karakter.')
+      setError(t('Password minimal 6 karakter.'))
       play('error')
       return
     }
 
     if (password !== confirmPassword) {
-      setError('Konfirmasi password tidak cocok.')
+      setError(t('Konfirmasi password tidak cocok.'))
       play('error')
       return
     }
@@ -62,13 +65,13 @@ export default function ResetPasswordForm({ email }: { email: string }) {
       const { error: updateError } = await supabase.auth.updateUser({ password })
 
       if (updateError) {
-        setError(friendlyAuthError(updateError.message))
+        setError(friendlyAuthError(updateError.message, t))
         play('error')
         return
       }
 
       play('success')
-      setMessage('Password berhasil diperbarui. Mengalihkan ke halaman masuk...')
+      setMessage(t('Password berhasil diperbarui. Mengalihkan ke halaman masuk...'))
 
       try {
         await supabase.auth.signOut()
@@ -80,7 +83,7 @@ export default function ResetPasswordForm({ email }: { email: string }) {
       router.refresh()
     } catch (err) {
       console.error('Password update failed:', err)
-      setError('Terjadi kesalahan. Coba lagi.')
+      setError(t('Terjadi kesalahan. Coba lagi.'))
       play('error')
     } finally {
       setLoading(false)
@@ -99,17 +102,17 @@ export default function ResetPasswordForm({ email }: { email: string }) {
             <h1 className="text-2xl font-bold shimmer-text">EcoSim</h1>
           </div>
           <p className="text-sm text-[var(--text-muted)]">
-            Buat password baru untuk akunmu
+            {t('Buat password baru untuk akunmu')}
           </p>
         </div>
 
         <div className="eco-card p-6">
           <div className="flex items-center justify-center gap-1.5 mb-5 text-[9px]">
-            <span className="text-[var(--accent-green)] font-semibold">1 Email</span>
+            <span className="text-[var(--accent-green)] font-semibold">{t('1 Email')}</span>
             <span className="text-[var(--text-muted)]">→</span>
-            <span className="text-[var(--accent-green)] font-semibold">2 Kode</span>
+            <span className="text-[var(--accent-green)] font-semibold">{t('2 Kode')}</span>
             <span className="text-[var(--text-muted)]">→</span>
-            <span className="text-[var(--accent-green)] font-semibold">3 Password</span>
+            <span className="text-[var(--accent-green)] font-semibold">{t('3 Password')}</span>
           </div>
 
           <p className="text-[10px] text-[var(--text-muted)] text-center mb-4 break-all">
@@ -119,7 +122,7 @@ export default function ResetPasswordForm({ email }: { email: string }) {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="text-xs text-[var(--text-muted)] block mb-1.5 font-medium">
-                Password baru
+                {t('Password baru')}
               </label>
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -130,13 +133,13 @@ export default function ResetPasswordForm({ email }: { email: string }) {
                 autoComplete="new-password"
                 autoFocus
                 className="w-full bg-[var(--input-bg)] border border-[var(--border-card)] rounded-lg px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-[var(--accent-green)] focus:ring-1 focus:ring-green-500/20 transition-colors placeholder:text-[var(--text-muted)]"
-                placeholder="Minimal 6 karakter"
+                placeholder={t('Minimal 6 karakter')}
               />
             </div>
 
             <div>
               <label className="text-xs text-[var(--text-muted)] block mb-1.5 font-medium">
-                Konfirmasi password
+                {t('Konfirmasi password')}
               </label>
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -146,7 +149,7 @@ export default function ResetPasswordForm({ email }: { email: string }) {
                 minLength={6}
                 autoComplete="new-password"
                 className="w-full bg-[var(--input-bg)] border border-[var(--border-card)] rounded-lg px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-[var(--accent-green)] focus:ring-1 focus:ring-green-500/20 transition-colors placeholder:text-[var(--text-muted)]"
-                placeholder="Ulangi password baru"
+                placeholder={t('Ulangi password baru')}
               />
             </div>
 
@@ -157,7 +160,7 @@ export default function ResetPasswordForm({ email }: { email: string }) {
                 onChange={(e) => setShowPassword(e.target.checked)}
                 className="accent-[var(--accent-green)]"
               />
-              Tampilkan password
+              {t('Tampilkan password')}
             </label>
 
             {error && (
@@ -183,7 +186,7 @@ export default function ResetPasswordForm({ email }: { email: string }) {
               disabled={loading}
               className="eco-btn-primary w-full py-2.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? '⏳ Menyimpan...' : '🔐 Simpan Password Baru'}
+              {loading ? t('⏳ Menyimpan...') : t('🔐 Simpan Password Baru')}
             </button>
           </form>
         </div>
@@ -194,7 +197,7 @@ export default function ResetPasswordForm({ email }: { email: string }) {
             className="text-xs text-[var(--text-muted)] hover:text-foreground transition-colors"
             onClick={() => play('click')}
           >
-            ← Kembali ke halaman masuk
+            {t('← Kembali ke halaman masuk')}
           </Link>
         </div>
       </div>

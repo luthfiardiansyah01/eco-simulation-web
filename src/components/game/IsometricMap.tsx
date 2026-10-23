@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useCallback } from 'react'
+import { useI18n } from '@/components/settings/PreferencesProvider'
 import type { GameAction } from '@/types'
 
 export type MapActionTrigger = (action: GameAction) => void
@@ -435,6 +436,7 @@ export default function IsometricMap({
   onTileClick,
   onAction,
 }: Props) {
+  const { t } = useI18n()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animRef = useRef<number>(0)
   const rippleRef = useRef<number>(0)
@@ -586,10 +588,10 @@ export default function IsometricMap({
     const fontSize = W < 360 ? 8 : 9
     ctx.font = `${fontSize}px Arial`
     const legendItems = [
-      { color: waterColor, label: 'Sungai' },
-      { color: '#2d7a3a', label: 'Tanah'  },
-      { color: '#1a5c28', label: 'Pohon'  },
-      { color: pollColor, label: 'Cemar'  },
+      { color: waterColor, label: t('Sungai') },
+      { color: '#2d7a3a', label: t('Tanah')  },
+      { color: '#1a5c28', label: t('Pohon')  },
+      { color: pollColor, label: t('Cemar')  },
     ]
     legendItems.forEach((item, i) => {
       const lx = i * itemW + 6
@@ -598,7 +600,7 @@ export default function IsometricMap({
       ctx.fillStyle = '#86efac'
       ctx.fillText(item.label, lx + 11, legendY + 8)
     })
-  }, [pollution, biodiversity, waterQuality, trees])
+  }, [pollution, biodiversity, waterQuality, trees, t])
 
   /**
    * Called imperatively by GameplayClient after a valid action. The effect is

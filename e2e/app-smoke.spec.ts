@@ -10,28 +10,28 @@ test.beforeEach(async ({ page }) => {
 test('home, region, mission, briefing, and gameplay pages render', async ({ page }) => {
   await gotoApp(page, '/')
   await expect(page.getByRole('heading', { name: 'EcoSim' })).toBeVisible()
-  await expect(page.getByRole('link', { name: /Adventure Mode/ })).toBeVisible()
-  await expect(page.getByText('Classic Free Roam')).toBeVisible()
+  await expect(page.getByRole('link', { name: /Mode Petualangan/ })).toBeVisible()
+  await expect(page.getByText('Jelajah Bebas Klasik')).toBeVisible()
   await expect(page.getByRole('link', { name: /Leaderboard/ })).toBeVisible()
   await expect(page.getByRole('link', { name: /Pengaturan/ })).toBeVisible()
 
   await gotoApp(page, '/region')
-  await expect(page.getByRole('heading', { name: 'Adventure Mode' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'West Java' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Central Java' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'East Java' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Mode Petualangan' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Jawa Barat' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Jawa Tengah' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Jawa Timur' })).toBeVisible()
   await expect(page.getByText('0/10 misi').first()).toBeVisible()
   await expect(page.getByRole('button', { name: '🔒 Terkunci' })).toHaveCount(2)
 
   await gotoApp(page, '/mission/west-java')
-  await expect(page.getByRole('heading', { name: 'West Java' })).toBeVisible()
-  await expect(page.getByText('River Cleanup Initiative')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Jawa Barat' })).toBeVisible()
+  await expect(page.getByText('Inisiatif Pembersihan Sungai')).toBeVisible()
   await expect(page.getByText(/Masuk untuk menyimpan progress/)).toBeVisible()
   await expect(page.getByText('TERKUNCI')).toHaveCount(9)
 
   await gotoApp(page, '/briefing/west-java/1')
   await expect(
-    page.getByRole('heading', { name: 'River Cleanup Initiative' })
+    page.getByRole('heading', { name: 'Inisiatif Pembersihan Sungai' })
   ).toBeVisible()
   await expect(page.getByText('Objektif Misi')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Hadiah' })).toBeVisible()
@@ -47,7 +47,7 @@ test('home, region, mission, briefing, and gameplay pages render', async ({ page
 
 test('legal, auth, leaderboard, profile, and settings pages render', async ({ page }) => {
   await gotoApp(page, '/privacy')
-  await expect(page.getByRole('heading', { name: 'Privacy Policy' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Kebijakan Privasi' })).toBeVisible()
   await expect(
     page.getByText('VRASS — Virtual River Awareness Simulation System', {
       exact: true,
@@ -72,7 +72,7 @@ test('legal, auth, leaderboard, profile, and settings pages render', async ({ pa
   await gotoApp(page, '/profile')
   await expect(page.getByRole('heading', { name: 'Player' })).toBeVisible()
   await expect(page.getByText('0/0')).toBeVisible()
-  await expect(page.getByText('Daftar Achievement')).toBeVisible()
+  await expect(page.getByText('Daftar Pencapaian')).toBeVisible()
 })
 
 test('unknown routes and unknown missions return 404', async ({ page }) => {

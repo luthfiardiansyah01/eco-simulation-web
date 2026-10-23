@@ -27,11 +27,11 @@ const COPY = {
     mutedHint: 'Suara sedang dibisukan.',
     language: 'Bahasa',
     languageDesc:
-      'Preferensi bahasa disimpan di perangkat ini dan langsung diterapkan pada halaman pengaturan.',
+      'Preferensi bahasa disimpan di perangkat ini dan diterapkan ke seluruh aplikasi.',
     indonesian: 'Bahasa Indonesia',
     english: 'English',
     notifications: 'Notifikasi',
-    notificationsDesc: 'Tampilkan notifikasi achievement saat misi selesai.',
+    notificationsDesc: 'Tampilkan notifikasi pencapaian saat misi selesai.',
     enabled: 'Aktif',
     disabled: 'Nonaktif',
     testNotification: 'Tampilkan notifikasi uji',
@@ -56,7 +56,7 @@ const COPY = {
     mutedHint: 'Sound is currently muted.',
     language: 'Language',
     languageDesc:
-      'The language preference is saved on this device and applied to this settings page immediately.',
+      'The language preference is saved on this device and applied throughout the app immediately.',
     indonesian: 'Bahasa Indonesia',
     english: 'English',
     notifications: 'Notifications',

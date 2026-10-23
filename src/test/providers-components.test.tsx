@@ -33,6 +33,7 @@ function PreferencesProbe() {
   const {
     language,
     setLanguage,
+    t,
     notifications,
     setNotifications,
     theme,
@@ -42,6 +43,7 @@ function PreferencesProbe() {
   return (
     <div>
       <span data-testid="language">{language}</span>
+      <span data-testid="translated">{t('Pengaturan')}</span>
       <span data-testid="notifications">{String(notifications)}</span>
       <span data-testid="theme">{theme}</span>
       <button onClick={() => setLanguage('en')}>set-en</button>
@@ -122,6 +124,7 @@ describe('PreferencesProvider', () => {
     )
     expect(screen.getByTestId('notifications')).toHaveTextContent('false')
     expect(screen.getByTestId('theme')).toHaveTextContent('light')
+    expect(screen.getByTestId('translated')).toHaveTextContent('Settings')
     expect(document.documentElement).toHaveAttribute('lang', 'en')
     await waitFor(() =>
       expect(document.documentElement.dataset.theme).toBe('light')
@@ -143,6 +146,7 @@ describe('PreferencesProvider', () => {
       expect(document.documentElement.dataset.theme).toBe('dark')
     )
     expect(screen.getByTestId('language')).toHaveTextContent('id')
+    expect(screen.getByTestId('translated')).toHaveTextContent('Pengaturan')
     expect(screen.getByTestId('notifications')).toHaveTextContent('true')
 
     await user.click(screen.getByRole('button', { name: 'set-en' }))
@@ -150,9 +154,11 @@ describe('PreferencesProvider', () => {
     await user.click(screen.getByRole('button', { name: 'set-light' }))
 
     expect(screen.getByTestId('language')).toHaveTextContent('en')
+    expect(screen.getByTestId('translated')).toHaveTextContent('Settings')
     expect(screen.getByTestId('notifications')).toHaveTextContent('false')
     expect(screen.getByTestId('theme')).toHaveTextContent('light')
     expect(localStorage.getItem('ecosim_language')).toBe('en')
+    expect(document.cookie).toContain('ecosim_language=en')
     expect(localStorage.getItem('ecosim_notifications')).toBe('0')
     expect(localStorage.getItem('ecosim_theme')).toBe('light')
     expect(document.documentElement.lang).toBe('en')
@@ -270,7 +276,7 @@ describe('AchievementToast', () => {
     )
 
     expect(await screen.findByText('Tree Starter')).toBeInTheDocument()
-    expect(screen.getByText('ACHIEVEMENT UNLOCKED')).toBeInTheDocument()
+    expect(screen.getByText('PENCAPAIAN TERBUKA')).toBeInTheDocument()
   })
 
   it('renders nothing when notifications are disabled or empty', async () => {
@@ -291,7 +297,7 @@ describe('AchievementToast', () => {
         <AchievementToast achievements={[]} />
       </PreferencesProvider>
     )
-    expect(screen.queryByText('ACHIEVEMENT UNLOCKED')).not.toBeInTheDocument()
+    expect(screen.queryByText('PENCAPAIAN TERBUKA')).not.toBeInTheDocument()
   })
 })
 
@@ -434,7 +440,7 @@ describe('OnboardingTutorial', () => {
     expect(screen.getByText('1 / 8')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Lanjut →' }))
-    expect(screen.getByText('Pilih Mode Adventure')).toBeInTheDocument()
+    expect(screen.getByText('Pilih Mode Petualangan')).toBeInTheDocument()
     expect(screen.getByText('2 / 8')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '← Kembali' }))
@@ -472,11 +478,11 @@ describe('OnboardingTutorial', () => {
       await user.click(screen.getByRole('button', { name: 'Lanjut →' }))
     }
     expect(screen.getByText('8 / 8')).toBeInTheDocument()
-    expect(screen.getByText('Raih Achievement!')).toBeInTheDocument()
+    expect(screen.getByText('Raih Pencapaian!')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '🌿 Mulai Bermain!' }))
     expect(onClose).toHaveBeenCalled()
-    expect(screen.queryByText('Raih Achievement!')).not.toBeInTheDocument()
+    expect(screen.queryByText('Raih Pencapaian!')).not.toBeInTheDocument()
     expect(localStorage.getItem('ecosim_onboarding_done')).toBe('1')
   })
 })
