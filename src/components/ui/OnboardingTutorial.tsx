@@ -8,7 +8,7 @@ import type { Translator } from '@/lib/i18n'
 const STEPS = [
   {
     emoji: '🌿',
-    title: 'Selamat Datang di EcoSim!',
+    title: 'Selamat Datang di VRASS!',
     desc: 'Kamu adalah Ranger lingkungan yang bertugas memulihkan ekosistem sungai di Pulau Jawa. Setiap keputusanmu menentukan nasib alam.',
     highlight: null,
     tip: null,

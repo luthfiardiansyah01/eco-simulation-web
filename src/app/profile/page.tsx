@@ -81,7 +81,7 @@ export default function ProfilePage() {
                 <h1 className="text-lg font-bold text-foreground truncate">{username || t('Player')}</h1>
                 <span className={`badge ${rankInfo.color}`}>{rankInfo.emoji} {rankInfo.label}</span>
               </div>
-              <p className="text-xs text-[var(--text-muted)]">{t('Eco Researcher · EcoSim')}</p>
+              <p className="text-xs text-[var(--text-muted)]">{t('Eco Researcher · VRASS')}</p>
             </div>
           </div>
         </div>

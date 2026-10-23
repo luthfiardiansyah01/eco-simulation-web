@@ -31,7 +31,7 @@ export default function Home() {
           <div className="inline-flex items-center gap-2 mb-4">
             <span className="text-3xl float">🌿</span>
             <h1 className="text-3xl md:text-4xl font-bold shimmer-text tracking-wide">
-              EcoSim
+              VRASS
             </h1>
             <span className="text-3xl float" style={{ animationDelay: '1s' }}>🌊</span>
           </div>

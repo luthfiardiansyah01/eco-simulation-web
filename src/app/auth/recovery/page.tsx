@@ -142,7 +142,7 @@ function RecoveryLinkContent() {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-3">
             <span className="text-3xl float">🌿</span>
-            <h1 className="text-2xl font-bold shimmer-text">EcoSim</h1>
+            <h1 className="text-2xl font-bold shimmer-text">VRASS</h1>
           </div>
         </div>
 

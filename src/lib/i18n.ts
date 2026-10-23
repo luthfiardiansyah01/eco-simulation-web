@@ -255,7 +255,7 @@ const EN: Record<string, string> = {
   // Profile
   'Gagal memuat achievement. Coba muat ulang halaman.':
     'Failed to load achievements. Try reloading the page.',
-  'Eco Researcher · EcoSim': 'Eco Researcher · EcoSim',
+  'Eco Researcher · VRASS': 'Eco Researcher · VRASS',
   'Status': 'Status',
   'Pencapaian': 'Achievement',
   'Progres Pencapaian': 'Achievement Progress',
@@ -447,7 +447,7 @@ const EN: Record<string, string> = {
     'Changes are saved automatically on this device.',
 
   // Onboarding
-  'Selamat Datang di EcoSim!': 'Welcome to EcoSim!',
+  'Selamat Datang di VRASS!': 'Welcome to VRASS!',
   'Kamu adalah Ranger lingkungan yang bertugas memulihkan ekosistem sungai di Pulau Jawa. Setiap keputusanmu menentukan nasib alam.':
     'You are an environmental Ranger tasked with restoring river ecosystems on the island of Java. Every decision you make shapes the fate of nature.',
   'Pilih Mode Petualangan': 'Choose Adventure Mode',

@@ -436,7 +436,7 @@ describe('OnboardingTutorial', () => {
     const user = userEvent.setup()
     renderTutorial()
 
-    expect(await screen.findByText('Selamat Datang di EcoSim!')).toBeInTheDocument()
+    expect(await screen.findByText('Selamat Datang di VRASS!')).toBeInTheDocument()
     expect(screen.getByText('1 / 8')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Lanjut →' }))
@@ -444,10 +444,10 @@ describe('OnboardingTutorial', () => {
     expect(screen.getByText('2 / 8')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '← Kembali' }))
-    expect(screen.getByText('Selamat Datang di EcoSim!')).toBeInTheDocument()
+    expect(screen.getByText('Selamat Datang di VRASS!')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Lewati' }))
-    expect(screen.queryByText('Selamat Datang di EcoSim!')).not.toBeInTheDocument()
+    expect(screen.queryByText('Selamat Datang di VRASS!')).not.toBeInTheDocument()
     expect(localStorage.getItem('ecosim_onboarding_done')).toBe('1')
     expect(engine.play).toHaveBeenCalledWith('start')
   })
@@ -458,12 +458,12 @@ describe('OnboardingTutorial', () => {
     const { unmount } = renderTutorial()
 
     await waitFor(() =>
-      expect(screen.queryByText('Selamat Datang di EcoSim!')).not.toBeInTheDocument()
+      expect(screen.queryByText('Selamat Datang di VRASS!')).not.toBeInTheDocument()
     )
     unmount()
 
     renderTutorial({ forceOpen: true, onClose })
-    expect(await screen.findByText('Selamat Datang di EcoSim!')).toBeInTheDocument()
+    expect(await screen.findByText('Selamat Datang di VRASS!')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Lewati' }))
     expect(onClose).toHaveBeenCalled()
   })
@@ -473,7 +473,7 @@ describe('OnboardingTutorial', () => {
     const onClose = vi.fn()
     renderTutorial({ forceOpen: true, onClose })
 
-    await screen.findByText('Selamat Datang di EcoSim!')
+    await screen.findByText('Selamat Datang di VRASS!')
     for (let step = 1; step < 8; step += 1) {
       await user.click(screen.getByRole('button', { name: 'Lanjut →' }))
     }
