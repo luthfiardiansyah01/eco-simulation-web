@@ -9,7 +9,7 @@ test.beforeEach(async ({ page }) => {
 
 test('home, region, mission, briefing, and gameplay pages render', async ({ page }) => {
   await gotoApp(page, '/')
-  await expect(page.getByRole('heading', { name: 'EcoSim' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'VRASS' })).toBeVisible()
   await expect(page.getByRole('link', { name: /Mode Petualangan/ })).toBeVisible()
   await expect(page.getByText('Jelajah Bebas Klasik')).toBeVisible()
   await expect(page.getByRole('link', { name: /Leaderboard/ })).toBeVisible()

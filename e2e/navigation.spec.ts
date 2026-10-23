@@ -32,10 +32,10 @@ test('guest can navigate from home to gameplay and back', async ({ page }) => {
 
 test('home tutorial can be reopened manually', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByText('Selamat Datang di EcoSim!')).not.toBeVisible()
+  await expect(page.getByText('Selamat Datang di VRASS!')).not.toBeVisible()
 
   await page.getByRole('button', { name: '❓ Tutorial' }).click()
-  await expect(page.getByText('Selamat Datang di EcoSim!')).toBeVisible()
+  await expect(page.getByText('Selamat Datang di VRASS!')).toBeVisible()
   await expect(page.getByText('1 / 8')).toBeVisible()
 
   await page.getByRole('button', { name: 'Lanjut →' }).click()
