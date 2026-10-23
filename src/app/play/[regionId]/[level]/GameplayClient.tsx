@@ -510,7 +510,7 @@ export default function GameplayClient({
                 play('click')
                 setShowExitConfirm(true)
               }}
-              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[10px] font-bold cursor-pointer transition-all hover:brightness-110 active:scale-95"
+              className="flex min-h-[32px] items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-bold cursor-pointer transition-all hover:brightness-110 active:scale-95"
               style={{
                 background: 'rgba(248, 113, 113, 0.2)',
                 border: '1px solid rgba(248, 113, 113, 0.65)',
