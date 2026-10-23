@@ -28,6 +28,8 @@ describe('i18n translator', () => {
     expect(translate('id', 'Masuk')).toBe('Masuk')
     expect(translate('en', 'Masuk')).toBe('Sign In')
     expect(translate('en', 'Bahasa Indonesia')).toBe('Bahasa Indonesia')
+    expect(translate('en', 'Keluar dari Simulasi?')).toBe('Exit Simulation?')
+    expect(translate('en', 'Lanjut Bermain')).toBe('Keep Playing')
     expect(translate('en', 'Belum ada terjemahan')).toBe('Belum ada terjemahan')
   })
 

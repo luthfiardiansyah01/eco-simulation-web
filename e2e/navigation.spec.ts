@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { openLevelOne } from './support/mission'
 import { mockSupabase } from './support/supabase'
 import { markOnboardingDone } from './support/ui'
 
@@ -28,6 +29,31 @@ test('guest can navigate from home to gameplay and back', async ({ page }) => {
   await page.locator('a[href="/briefing/west-java/1?difficulty=normal"]').click()
   await expect(page).toHaveURL(/\/briefing\/west-java\/1\?difficulty=normal$/)
   await expect(page.getByText('Objektif Misi')).toBeVisible()
+})
+
+test('gameplay exit dialog can resume or leave for the menu', async ({ page }) => {
+  await openLevelOne(page)
+  const dialog = page.getByRole('dialog', { name: 'Keluar dari Simulasi?' })
+
+  await page.getByTestId('exit-game').click()
+  await expect(dialog).toBeVisible()
+  await expect(
+    dialog.getByText('Progress misi yang belum selesai tidak akan disimpan.')
+  ).toBeVisible()
+  await expect(dialog.getByRole('link', { name: 'Kembali ke Briefing' })).toBeVisible()
+
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+
+  await page.getByTestId('exit-game').click()
+  await dialog.getByRole('button', { name: 'Lanjut Bermain' }).click()
+  await expect(dialog).toBeHidden()
+  await expect(page).toHaveURL(/\/play\/west-java\/1/)
+
+  await page.getByTestId('exit-game').click()
+  await dialog.getByRole('link', { name: 'Keluar ke Menu' }).click()
+  await expect(page).toHaveURL(/\/$/)
+  await expect(page.getByRole('heading', { name: 'VRASS' })).toBeVisible()
 })
 
 test('home tutorial can be reopened manually', async ({ page }) => {

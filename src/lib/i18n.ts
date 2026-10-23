@@ -180,6 +180,13 @@ const EN: Record<string, string> = {
     'Resources ran out before every objective was completed. Reset the mission to restore resources and try again.',
   '🔄 Reset Misi': '🔄 Reset Mission',
   'Kembali ke Briefing': 'Back to Briefing',
+  'Keluar Game': 'Exit Game',
+  'Keluar dari simulasi': 'Exit simulation',
+  'Keluar dari Simulasi?': 'Exit Simulation?',
+  'Progress misi yang belum selesai tidak akan disimpan.':
+    'Unfinished mission progress will not be saved.',
+  'Lanjut Bermain': 'Keep Playing',
+  'Keluar ke Menu': 'Exit to Menu',
   'Lingkungan': 'Environment',
   'Polusi': 'Pollution',
   'Bio': 'Bio',

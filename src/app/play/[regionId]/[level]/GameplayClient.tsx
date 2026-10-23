@@ -87,6 +87,7 @@ export default function GameplayClient({
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [saveError, setSaveError] = useState('')
   const [newAchievements, setNewAchievements] = useState<Achievement[]>([])
+  const [showExitConfirm, setShowExitConfirm] = useState(false)
   const logSeq = useRef(0)
   const startedRef = useRef(false)
   const completionGuardRef = useRef(false)
@@ -157,6 +158,15 @@ export default function GameplayClient({
     const timer = setTimeout(() => setNewAchievements([]), 4000)
     return () => clearTimeout(timer)
   }, [newAchievements])
+
+  useEffect(() => {
+    if (!showExitConfirm) return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowExitConfirm(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [showExitConfirm])
 
   const pushLog = useCallback((type: EventLog['type'], message: string) => {
     logSeq.current += 1
@@ -337,6 +347,69 @@ export default function GameplayClient({
       <div id="gameplay-root" className="flex flex-col" style={{ background: 'var(--background)', color: 'var(--foreground)', width: '100%', height: '100dvh', overflow: 'hidden' }}>
         <AchievementToast achievements={newAchievements} />
 
+        {/* Exit confirmation */}
+        {showExitConfirm && (
+          <div
+            data-testid="exit-game-dialog"
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+            style={{ background: 'var(--overlay-backdrop)', backdropFilter: 'blur(8px)' }}
+            onClick={(event) => {
+              if (event.target === event.currentTarget) setShowExitConfirm(false)
+            }}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="exit-game-title"
+              aria-describedby="exit-game-description"
+              className="eco-card p-5 max-w-sm w-full"
+              style={{ borderColor: 'var(--accent-red)' }}
+            >
+              <div className="text-3xl text-center mb-2">🚪</div>
+              <h2 id="exit-game-title" className="text-lg font-bold text-foreground text-center mb-1">
+                {t('Keluar dari Simulasi?')}
+              </h2>
+              <p id="exit-game-description" className="text-xs text-[var(--text-muted)] text-center leading-relaxed mb-4">
+                {t('Progress misi yang belum selesai tidak akan disimpan.')}
+              </p>
+              <div className="flex flex-col gap-2">
+                <button
+                  autoFocus
+                  type="button"
+                  onClick={() => {
+                    play('click')
+                    setShowExitConfirm(false)
+                  }}
+                  className="eco-btn-primary w-full py-2 text-sm"
+                >
+                  {t('Lanjut Bermain')}
+                </button>
+                <Link
+                  href={`/briefing/${regionId}/${level}?difficulty=${difficulty}`}
+                  className="eco-btn-secondary block w-full py-2 text-sm text-center"
+                  onClick={() => {
+                    play('click')
+                    setShowExitConfirm(false)
+                  }}
+                >
+                  {t('Kembali ke Briefing')}
+                </Link>
+                <Link
+                  href="/"
+                  className="block w-full py-2 text-sm text-center rounded-[10px] border transition-colors"
+                  style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)' }}
+                  onClick={() => {
+                    play('click')
+                    setShowExitConfirm(false)
+                  }}
+                >
+                  {t('Keluar ke Menu')}
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Mission Complete */}
         {missionComplete && (
           <div data-testid="mission-complete" className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--overlay-backdrop)', backdropFilter: 'blur(8px)' }}>
@@ -430,6 +503,19 @@ export default function GameplayClient({
             >
               ⏸
             </Link>
+            <button
+              type="button"
+              data-testid="exit-game"
+              onClick={() => {
+                play('click')
+                setShowExitConfirm(true)
+              }}
+              className="badge badge-red text-[9px] cursor-pointer"
+              title={t('Keluar dari simulasi')}
+              aria-label={t('Keluar dari simulasi')}
+            >
+              🚪 <span className="hidden md:inline">{t('Keluar Game')}</span>
+            </button>
           </div>
         </div>
 
