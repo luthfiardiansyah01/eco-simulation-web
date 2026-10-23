@@ -510,11 +510,18 @@ export default function GameplayClient({
                 play('click')
                 setShowExitConfirm(true)
               }}
-              className="badge badge-red text-[9px] cursor-pointer"
+              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[10px] font-bold cursor-pointer transition-all hover:brightness-110 active:scale-95"
+              style={{
+                background: 'rgba(248, 113, 113, 0.2)',
+                border: '1px solid rgba(248, 113, 113, 0.65)',
+                color: '#fca5a5',
+                boxShadow: '0 0 10px rgba(248, 113, 113, 0.15)',
+              }}
               title={t('Keluar dari simulasi')}
               aria-label={t('Keluar dari simulasi')}
             >
-              🚪 <span className="hidden md:inline">{t('Keluar Game')}</span>
+              <span aria-hidden="true">🚪</span>
+              <span>{t('Keluar Game')}</span>
             </button>
           </div>
         </div>

@@ -35,6 +35,9 @@ test('gameplay exit dialog can resume or leave for the menu', async ({ page }) =
   await openLevelOne(page)
   const dialog = page.getByRole('dialog', { name: 'Keluar dari Simulasi?' })
 
+  await expect(page.getByTestId('exit-game')).toBeVisible()
+  await expect(page.getByTestId('exit-game')).toContainText('Keluar Game')
+
   await page.getByTestId('exit-game').click()
   await expect(dialog).toBeVisible()
   await expect(
