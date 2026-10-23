@@ -30,6 +30,8 @@ describe('i18n translator', () => {
     expect(translate('en', 'Bahasa Indonesia')).toBe('Bahasa Indonesia')
     expect(translate('en', 'Keluar dari Simulasi?')).toBe('Exit Simulation?')
     expect(translate('en', 'Lanjut Bermain')).toBe('Keep Playing')
+    expect(translate('en', 'Keluar Aplikasi')).toBe('Exit App')
+    expect(translate('en', 'Keluar dari Aplikasi?')).toBe('Exit App?')
     expect(translate('en', 'Belum ada terjemahan')).toBe('Belum ada terjemahan')
   })
 

@@ -54,7 +54,7 @@ test('gameplay exit dialog can resume or leave for the menu', async ({ page }) =
   await expect(page).toHaveURL(/\/play\/west-java\/1/)
 
   await page.getByTestId('exit-game').click()
-  await dialog.getByRole('link', { name: 'Keluar ke Menu' }).click()
+  await dialog.getByRole('button', { name: 'Keluar ke Menu' }).click()
   await expect(page).toHaveURL(/\/$/)
   await expect(page.getByRole('heading', { name: 'VRASS' })).toBeVisible()
 })

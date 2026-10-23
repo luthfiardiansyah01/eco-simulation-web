@@ -1,7 +1,10 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { App } from '@capacitor/app'
+import { Capacitor } from '@capacitor/core'
 import { Mission, EnvironmentStatus, EventLog, GameAction, Achievement } from '@/types'
 import { completeMission, type CompleteMissionResult } from '@/lib/supabase/progress'
 import { checkAndUnlockAchievements } from '@/lib/supabase/achievements'
@@ -63,6 +66,10 @@ const INITIAL_LOGS: EventLog[] = [
   { id: '4', type: 'success', message: 'Data riset terkumpul',       timestamp: new Date() },
 ]
 
+const subscribeToNativeApp = () => () => {}
+const getNativeAppSnapshot = () => Capacitor.isNativePlatform()
+const getServerNativeAppSnapshot = () => false
+
 export default function GameplayClient({
   mission,
   regionId,
@@ -76,6 +83,12 @@ export default function GameplayClient({
 }) {
   const { play, startAmbience, stopAmbience } = useSound()
   const { language, t } = useI18n()
+  const router = useRouter()
+  const isNativeApp = useSyncExternalStore(
+    subscribeToNativeApp,
+    getNativeAppSnapshot,
+    getServerNativeAppSnapshot
+  )
   const difficultyMeta = DIFFICULTIES[difficulty]
   const initialLogs = useMemo(
     () => INITIAL_LOGS.map((log) => ({ ...log, message: t(log.message) })),
@@ -191,6 +204,23 @@ export default function GameplayClient({
     pushLog('info', t('Misi direset. Sumber daya dan lingkungan dipulihkan.'))
     play('click')
   }, [difficulty, initialLogs, mission, play, pushLog, t])
+
+  const exitApplication = useCallback(async () => {
+    play('click')
+    setShowExitConfirm(false)
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await App.exitApp()
+        return
+      } catch (error) {
+        console.error('Failed to exit the app', error)
+      }
+    }
+
+    // Browsers cannot close a normal tab. Fall back to the main menu.
+    router.push('/')
+  }, [play, router])
 
   const persistMission = useCallback(async (snapshot: EnvironmentStatus) => {
     setSaveState('saving')
@@ -367,10 +397,12 @@ export default function GameplayClient({
             >
               <div className="text-3xl text-center mb-2">🚪</div>
               <h2 id="exit-game-title" className="text-lg font-bold text-foreground text-center mb-1">
-                {t('Keluar dari Simulasi?')}
+                {isNativeApp ? t('Keluar dari Aplikasi?') : t('Keluar dari Simulasi?')}
               </h2>
               <p id="exit-game-description" className="text-xs text-[var(--text-muted)] text-center leading-relaxed mb-4">
-                {t('Progress misi yang belum selesai tidak akan disimpan.')}
+                {isNativeApp
+                  ? t('Aplikasi akan ditutup. Progress misi yang belum selesai tidak akan disimpan.')
+                  : t('Progress misi yang belum selesai tidak akan disimpan.')}
               </p>
               <div className="flex flex-col gap-2">
                 <button
@@ -394,17 +426,14 @@ export default function GameplayClient({
                 >
                   {t('Kembali ke Briefing')}
                 </Link>
-                <Link
-                  href="/"
+                <button
+                  type="button"
+                  onClick={() => { void exitApplication() }}
                   className="block w-full py-2 text-sm text-center rounded-[10px] border transition-colors"
                   style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)' }}
-                  onClick={() => {
-                    play('click')
-                    setShowExitConfirm(false)
-                  }}
                 >
-                  {t('Keluar ke Menu')}
-                </Link>
+                  {isNativeApp ? t('Keluar Aplikasi') : t('Keluar ke Menu')}
+                </button>
               </div>
             </div>
           </div>

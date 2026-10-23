@@ -187,6 +187,10 @@ const EN: Record<string, string> = {
     'Unfinished mission progress will not be saved.',
   'Lanjut Bermain': 'Keep Playing',
   'Keluar ke Menu': 'Exit to Menu',
+  'Keluar Aplikasi': 'Exit App',
+  'Keluar dari Aplikasi?': 'Exit App?',
+  'Aplikasi akan ditutup. Progress misi yang belum selesai tidak akan disimpan.':
+    'The app will close. Unfinished mission progress will not be saved.',
   'Lingkungan': 'Environment',
   'Polusi': 'Pollution',
   'Bio': 'Bio',
