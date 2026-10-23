@@ -91,6 +91,19 @@ test('unknown routes and unknown missions return 404', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '404' })).toBeVisible()
 })
 
+test('unavailable mission placeholders return to the mission list instead of a 404', async ({
+  page,
+}) => {
+  await gotoApp(page, '/briefing/west-java/3')
+  await expect(page).toHaveURL(/\/mission\/west-java$/)
+  await expect(page.getByRole('heading', { name: 'Jawa Barat' })).toBeVisible()
+  await expect(page.locator('a[href="/briefing/west-java/3"]')).toHaveCount(0)
+
+  await gotoApp(page, '/play/west-java/3')
+  await expect(page).toHaveURL(/\/mission\/west-java$/)
+  await expect(page.getByRole('heading', { name: 'Jawa Barat' })).toBeVisible()
+})
+
 test('auth routes redirect failures and display query messages', async ({ page }) => {
   await page.goto('/auth/callback')
   await page.waitForURL('**/login?error=auth_callback_failed')

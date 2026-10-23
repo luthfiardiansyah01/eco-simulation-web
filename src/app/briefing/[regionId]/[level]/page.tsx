@@ -1,12 +1,12 @@
 import SoundLink from '@/components/audio/SoundLink'
-import { MISSIONS } from '@/data/regions'
+import { MISSIONS, MISSION_LEVELS } from '@/data/regions'
 import {
   DIFFICULTIES,
   DIFFICULTY_ORDER,
   getStartingStatus,
   parseDifficulty,
 } from '@/lib/gameplay/difficulty'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { getTranslator } from '@/lib/i18n-server'
 import { localizeMission } from '@/lib/i18n-content'
 import { formatNumber } from '@/lib/i18n'
@@ -23,8 +23,14 @@ export default async function BriefingPage({
   const { regionId, level } = await params
   const { difficulty: difficultyParam } = await searchParams
   const { language, t } = await getTranslator()
-  const mission = MISSIONS.find((m) => m.regionId === regionId && m.level === parseInt(level))
-  if (!mission) notFound()
+  const levelNumber = parseInt(level)
+  const mission = MISSIONS.find((m) => m.regionId === regionId && m.level === levelNumber)
+  if (!mission) {
+    if (MISSION_LEVELS[regionId]?.some((missionLevel) => missionLevel.id === levelNumber)) {
+      redirect(`/mission/${regionId}`)
+    }
+    notFound()
+  }
   const localizedMission = localizeMission(mission, language)
 
   const difficulty = parseDifficulty(difficultyParam)

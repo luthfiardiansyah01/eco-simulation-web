@@ -1,5 +1,5 @@
 import SoundLink from '@/components/audio/SoundLink'
-import { MISSION_LEVELS } from '@/data/regions'
+import { MISSIONS, MISSION_LEVELS } from '@/data/regions'
 import { notFound } from 'next/navigation'
 import { getProgressServer } from '@/lib/supabase/progress-server'
 import { getTranslator } from '@/lib/i18n-server'
@@ -29,10 +29,13 @@ export default async function MissionPage({ params }: { params: Promise<{ region
   const progress = await getProgressServer(regionId)
   const completedLevels = progress?.completedLevels ?? []
   const currentLevel = progress?.currentLevel ?? 1
+  const availableLevels = new Set(
+    MISSIONS.filter((mission) => mission.regionId === regionId).map((mission) => mission.level)
+  )
 
   const levels = baseLevels.map((level) => ({
     ...localizeMissionLevel(level, language),
-    unlocked: level.id <= currentLevel,
+    unlocked: availableLevels.has(level.id) && level.id <= currentLevel,
     completed: completedLevels.includes(level.id),
   }))
 
