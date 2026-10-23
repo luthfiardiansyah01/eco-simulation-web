@@ -62,7 +62,6 @@ const EN: Record<string, string> = {
   'Player': 'Player',
 
   // Home
-  'River Ecosystem Simulation': 'River Ecosystem Simulation',
   'Simulasi Ekosistem Sungai': 'River Ecosystem Simulation',
   '— Pilih Mode Simulasi —': '— Choose Simulation Mode —',
   'Selesaikan misi pemulihan ekosistem sungai di 3 wilayah Jawa dengan tantangan lingkungan dinamis.':
@@ -76,7 +75,7 @@ const EN: Record<string, string> = {
   'Biomassa': 'Biomass',
   'Iklim': 'Climate',
   'Dinamis': 'Dynamic',
-  '3 Region': '3 Regions',
+  '3 Wilayah': '3 Regions',
   '▶ Mulai Petualangan': '▶ Start Adventure',
   'Jelajahi ekosistem secara bebas tanpa objektif. Kreasi sebebasnya seperti sandbox.':
     'Explore the ecosystem freely without objectives. Create as freely as in a sandbox.',
@@ -103,7 +102,7 @@ const EN: Record<string, string> = {
   'Pilih level misi untuk dimulai': 'Choose a mission level to start',
   'Poin Riset': 'Research Points',
   'pts': 'pts',
-  'Completion': 'Completion',
+  'Penyelesaian': 'Completion',
   'untuk menyimpan progress dan membuka level berikutnya secara otomatis.':
     'to save progress and unlock the next level automatically.',
 

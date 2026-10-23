@@ -90,7 +90,7 @@ export default function ProfilePage() {
         <div className="grid grid-cols-3 gap-3 mb-5">
           {[
             { label: t('Pencapaian'), value: `${unlockedCount}/${achievements.length}`, emoji: '🏆', color: 'var(--accent-amber)' },
-            { label: t('Completion'), value: `${pct}%`, emoji: '📊', color: 'var(--accent-teal)' },
+            { label: t('Penyelesaian'), value: `${pct}%`, emoji: '📊', color: 'var(--accent-teal)' },
             { label: t('Status'), value: t('Aktif'), emoji: '🌱', color: 'var(--accent-green)' },
           ].map(({ label, value, emoji, color }) => (
             <div key={label} className="eco-card p-3 text-center">

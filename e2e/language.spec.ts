@@ -17,6 +17,7 @@ test('language selection localizes server pages and the gameplay client', async 
 
   await gotoApp(page, '/mission/west-java')
   await expect(page.getByText('Inisiatif Pembersihan Sungai')).toBeVisible()
+  await expect(page.getByText('Penyelesaian')).toBeVisible()
 
   await gotoApp(page, '/settings')
   await page.getByRole('button', { name: /English/ }).click()
@@ -26,6 +27,8 @@ test('language selection localizes server pages and the gameplay client', async 
   await gotoApp(page, '/')
   await expect(page.getByRole('link', { name: /Adventure Mode/ })).toBeVisible()
   await expect(page.getByText('Classic Free Roam')).toBeVisible()
+  await expect(page.getByText('River Ecosystem Simulation')).toBeVisible()
+  await expect(page.getByText('3 Regions', { exact: true })).toBeVisible()
 
   await gotoApp(page, '/region')
   await expect(page.getByRole('heading', { name: 'Adventure Mode' })).toBeVisible()
@@ -34,6 +37,7 @@ test('language selection localizes server pages and the gameplay client', async 
 
   await gotoApp(page, '/mission/west-java')
   await expect(page.getByText('River Cleanup Initiative')).toBeVisible()
+  await expect(page.getByText('Completion')).toBeVisible()
 
   await gotoApp(page, '/briefing/west-java/1')
   await expect(
@@ -57,6 +61,8 @@ test('language selection localizes server pages and the gameplay client', async 
   await gotoApp(page, '/')
   await expect(page.getByRole('link', { name: /Mode Petualangan/ })).toBeVisible()
   await expect(page.getByText('Jelajah Bebas Klasik')).toBeVisible()
+  await expect(page.getByText('Simulasi Ekosistem Sungai')).toBeVisible()
+  await expect(page.getByText('3 Wilayah', { exact: true })).toBeVisible()
 
   await gotoApp(page, '/region')
   await expect(page.getByRole('heading', { name: 'Mode Petualangan' })).toBeVisible()

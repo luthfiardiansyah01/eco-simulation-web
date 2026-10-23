@@ -35,7 +35,7 @@ export default function Home() {
             </h1>
             <span className="text-3xl float" style={{ animationDelay: '1s' }}>🌊</span>
           </div>
-          <p className="text-sm text-[var(--text-muted)] mb-4">{t('River Ecosystem Simulation')}</p>
+          <p className="text-sm text-[var(--text-muted)] mb-4">{t('Simulasi Ekosistem Sungai')}</p>
           <div className="flex items-center justify-center gap-3 text-xs">
             <span className="badge badge-green">● {t('ONLINE')}</span>
             <AuthButton />
@@ -72,7 +72,7 @@ export default function Home() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[var(--text-muted)]">{t('Wilayah')}</span>
-                  <span className="text-[var(--accent-teal)]">{t('3 Region')}</span>
+                  <span className="text-[var(--accent-teal)]">{t('3 Wilayah')}</span>
                 </div>
               </div>
               <button className="eco-btn-primary w-full py-2.5 text-sm">

@@ -84,7 +84,7 @@ export default async function MissionPage({ params }: { params: Promise<{ region
             {/* Progress bar */}
             <div className="mt-4">
               <div className="flex justify-between text-xs mb-1.5">
-                <span className="text-[var(--text-muted)]">{t('Completion')}</span>
+                <span className="text-[var(--text-muted)]">{t('Penyelesaian')}</span>
                 <span className="text-[var(--accent-green)]">{completionPct}%</span>
               </div>
               <div className="progress-bar-bg h-2">
