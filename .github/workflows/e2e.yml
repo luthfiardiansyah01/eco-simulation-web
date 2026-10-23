@@ -1,4 +1,4 @@
-name: E2E tests
+name: Unit and E2E tests
 
 on:
   push:
@@ -19,6 +19,10 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      - run: npm test
+      - run: npx tsc --noEmit
+      - run: npm run lint
 
       - run: npx playwright install --with-deps chromium
 

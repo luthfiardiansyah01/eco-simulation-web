@@ -20,6 +20,10 @@ const eslintConfig = defineConfig([
     "build/**",
     "android/**",
     "next-env.d.ts",
+    // Generated test and coverage output.
+    "coverage/**",
+    "playwright-report/**",
+    "test-results/**",
     // Browser service worker globals are not part of the app TS environment.
     "public/sw.js",
   ]),

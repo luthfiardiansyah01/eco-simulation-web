@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test'
 
 const port = 3100
 const baseURL = `http://127.0.0.1:${port}`
-const fakeSupabaseURL = 'http://127.0.0.1:54321'
+const fakeSupabaseURL = 'http://127.0.0.1:54329'
 
 export default defineConfig({
   testDir: './e2e',
@@ -33,15 +33,23 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: {
-    command: `npm run dev -- --hostname 127.0.0.1 --port ${port}`,
-    url: baseURL,
-    reuseExistingServer: false,
-    timeout: 120_000,
-    env: {
-      NEXT_TELEMETRY_DISABLED: '1',
-      NEXT_PUBLIC_SUPABASE_URL: fakeSupabaseURL,
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'e2e-anon-key',
+  webServer: [
+    {
+      command: 'node e2e/support/mock-supabase-server.mjs',
+      url: `${fakeSupabaseURL}/health`,
+      reuseExistingServer: false,
+      timeout: 30_000,
     },
-  },
+    {
+      command: `npm run dev -- --hostname 127.0.0.1 --port ${port}`,
+      url: baseURL,
+      reuseExistingServer: false,
+      timeout: 120_000,
+      env: {
+        NEXT_TELEMETRY_DISABLED: '1',
+        NEXT_PUBLIC_SUPABASE_URL: fakeSupabaseURL,
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'e2e-anon-key',
+      },
+    },
+  ],
 })
