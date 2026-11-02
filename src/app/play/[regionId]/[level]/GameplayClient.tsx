@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { App } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
-import { Mission, EnvironmentStatus, EventLog, GameAction, Achievement } from '@/types'
+import { Mission, EnvironmentStatus, EventLog, GameAction, Achievement, ObjectiveMetric } from '@/types'
 import { completeMission, type CompleteMissionResult } from '@/lib/supabase/progress'
 import { checkAndUnlockAchievements } from '@/lib/supabase/achievements'
 import {
@@ -34,6 +34,12 @@ import {
   canAfford,
   formatCost,
 } from '@/lib/gameplay/actions'
+import {
+  buildHotspots,
+  hotspotLevelColor,
+  hotspotLevelLabel,
+  type MapHotspot,
+} from '@/lib/gameplay/hotspots'
 
 type ActionDefinition = { emoji: string; label: string; action: GameAction }
 type SaveState = 'idle' | 'saving' | 'saved' | 'guest' | 'error'
@@ -54,6 +60,15 @@ const ACTIONS: ActionDefinition[] = [
   { emoji: '📊', label: 'Analisis',    action: 'analyze_area' },
   { emoji: '🏕️', label: 'Base',        action: 'return_base'  },
 ]
+
+const METRIC_LABELS: Record<ObjectiveMetric, string> = {
+  pollution: 'Polusi',
+  biodiversity: 'Bio',
+  waterQuality: 'Air',
+  fishPopulation: 'Ikan',
+  trees: 'Pohon',
+  drones: 'Drone',
+}
 
 const ACTION_SOUNDS: Record<GameAction, SoundName> = {
   clean_waste: 'clean',
@@ -111,6 +126,8 @@ export default function GameplayClient({
   const [showGuide, setShowGuide] = useState(false)
   const [hasActed, setHasActed] = useState(false)
   const [actionFeedback, setActionFeedback] = useState<ActionFeedback | null>(null)
+  const [selectedHotspotId, setSelectedHotspotId] = useState<string | null>(null)
+  const [showWarnings, setShowWarnings] = useState(false)
   const logSeq = useRef(0)
   const feedbackSeq = useRef(0)
   const feedbackTimer = useRef<number | null>(null)
@@ -133,6 +150,21 @@ export default function GameplayClient({
       && canAfford(ACTION_COSTS[definition.action], status)
   )
   const missionFailed = !missionComplete && progress < 100 && !canMakeProgress
+
+  const hotspots = useMemo(() => buildHotspots(status), [status])
+  const selectedHotspot =
+    hotspots.find((hotspot) => hotspot.id === selectedHotspotId) ?? null
+  const selectedHotspotAction = selectedHotspot
+    ? ACTIONS.find((definition) => definition.action === selectedHotspot.recommendedAction)
+    : undefined
+  const hotspotActionReady = Boolean(
+    selectedHotspotAction
+      && canAdvanceObjective(selectedHotspotAction.action, mission.objectives, status)
+      && canAfford(ACTION_COSTS[selectedHotspotAction.action], status)
+      && !missionComplete
+      && !missionFailed
+  )
+  const criticalHotspots = hotspots.filter((hotspot) => hotspot.level === 'critical').length
 
   function lockOrientation(orientation: 'landscape' | 'portrait') {
     // Native Android bridge (most reliable)
@@ -213,6 +245,8 @@ export default function GameplayClient({
     setSaveError('')
     setNewAchievements([])
     setHasActed(false)
+    setSelectedHotspotId(null)
+    setShowWarnings(false)
     logSeq.current = 0
     pushLog('info', t('Misi direset. Sumber daya dan lingkungan dipulihkan.'))
     play('click')
@@ -334,6 +368,19 @@ export default function GameplayClient({
     mapActionRef.current = trigger
   }, [])
 
+  const handleHotspotClick = useCallback((hotspot: MapHotspot) => {
+    play('tile')
+    setSelectedHotspotId(hotspot.id)
+    setShowWarnings(false)
+    pushLog(
+      hotspot.level === 'critical' ? 'alert' : 'info',
+      t('{label}: {status}', {
+        label: t(hotspot.label),
+        status: t(hotspotLevelLabel(hotspot.level)),
+      })
+    )
+  }, [play, pushLog, t])
+
   const handleAction = useCallback((definition: ActionDefinition) => {
     if (missionComplete || missionFailed) return
 
@@ -403,6 +450,11 @@ export default function GameplayClient({
       missionProgressPercent(mission.objectives, result.status)
     )
   }, [status, treeTarget, droneTarget, pushLog, checkMissionComplete, mission.objectives, missionComplete, missionFailed, play, language, t, showActionFeedback])
+
+  const handleHotspotAction = useCallback(() => {
+    if (!selectedHotspotAction) return
+    handleAction(selectedHotspotAction)
+  }, [handleAction, selectedHotspotAction])
 
   const barColor = (val: number, inv = false) => {
     const v = inv ? 100 - val : val
@@ -730,9 +782,13 @@ export default function GameplayClient({
                 biodiversity={status.biodiversity}
                 waterQuality={status.waterQuality}
                 trees={status.trees}
+                hotspots={hotspots}
+                selectedHotspotId={selectedHotspotId}
                 onAction={registerMapAction}
+                onHotspotClick={handleHotspotClick}
                 onTileClick={(type) => {
                   play('tile')
+                  setSelectedHotspotId(null)
                   const msgs: Record<string, string> = {
                     water:    t('Sungai — scan kualitas air'),
                     grass:    t('Area hijau — cocok untuk pohon'),
@@ -746,6 +802,149 @@ export default function GameplayClient({
                   )
                 }}
               />
+
+              {/* Warning summary and problem-area list */}
+              <div className="absolute left-2 top-2 z-20 flex max-w-[240px] flex-col items-start gap-1.5">
+                <button
+                  type="button"
+                  data-testid="warning-toggle"
+                  aria-expanded={showWarnings}
+                  aria-controls="warning-panel"
+                  onClick={() => {
+                    play('click')
+                    setShowWarnings((open) => !open)
+                  }}
+                  className="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold shadow-lg transition-all active:scale-95"
+                  style={{
+                    background: 'rgba(10, 34, 26, 0.9)',
+                    borderColor: criticalHotspots > 0 ? 'var(--accent-red)' : 'var(--accent-amber)',
+                    color: criticalHotspots > 0 ? '#fca5a5' : 'var(--accent-amber)',
+                    boxShadow: criticalHotspots > 0 ? '0 0 12px rgba(248, 113, 113, 0.25)' : undefined,
+                  }}
+                  title={t('Peringatan lingkungan')}
+                >
+                  <span aria-hidden="true">⚠</span>
+                  <span>
+                    {t('{count} titik masalah', { count: hotspots.length })}
+                    {criticalHotspots > 0 && ` · ${criticalHotspots} ${t('kritis')}`}
+                  </span>
+                  <span aria-hidden="true" className={showWarnings ? 'rotate-180' : ''}>
+                    ⌃
+                  </span>
+                </button>
+
+                {showWarnings && (
+                  <div
+                    id="warning-panel"
+                    data-testid="warning-panel"
+                    role="region"
+                    aria-label={t('Peringatan lingkungan')}
+                    className="modal-pop max-h-[min(42vh,260px)] w-[220px] overflow-y-auto rounded-xl border p-1.5 shadow-xl"
+                    style={{
+                      background: 'rgba(8, 24, 18, 0.97)',
+                      borderColor: 'var(--border-card)',
+                    }}
+                  >
+                    <p className="px-1.5 py-1 text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">
+                      {t('Peringatan lingkungan')}
+                    </p>
+                    {hotspots.map((hotspot) => (
+                      <button
+                        key={hotspot.id}
+                        type="button"
+                        data-testid={`hotspot-item-${hotspot.id}`}
+                        onClick={() => handleHotspotClick(hotspot)}
+                        className="flex w-full items-start gap-1.5 rounded-lg px-1.5 py-1 text-left transition-colors hover:bg-[var(--surface-selected)]"
+                      >
+                        <span aria-hidden="true" className="text-[12px] leading-tight">
+                          {hotspot.icon}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[10px] font-semibold text-foreground">
+                            {t(hotspot.label)}
+                          </span>
+                          <span
+                            className="block text-[9px]"
+                            style={{ color: hotspotLevelColor(hotspot.level) }}
+                          >
+                            {t(hotspotLevelLabel(hotspot.level))} · {hotspot.severity}%
+                          </span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Selected problem-area details */}
+              {selectedHotspot && (
+                <div
+                  data-testid="hotspot-info"
+                  role="region"
+                  aria-label={t(selectedHotspot.label)}
+                  className="modal-pop absolute bottom-2 left-2 z-30 w-[min(300px,calc(100%-1rem))] rounded-xl border p-2.5 shadow-xl"
+                  style={{
+                    background: 'rgba(8, 24, 18, 0.97)',
+                    borderColor: hotspotLevelColor(selectedHotspot.level),
+                    boxShadow: `0 8px 24px rgba(0,0,0,0.45), 0 0 12px ${hotspotLevelColor(selectedHotspot.level)}33`,
+                  }}
+                >
+                  <div className="flex items-start gap-2">
+                    <span aria-hidden="true" className="text-lg leading-none">
+                      {selectedHotspot.icon}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[11px] font-bold text-foreground">
+                        {t(selectedHotspot.label)}
+                      </p>
+                      <p
+                        className="text-[9px] font-semibold uppercase tracking-wide"
+                        style={{ color: hotspotLevelColor(selectedHotspot.level) }}
+                      >
+                        {t(hotspotLevelLabel(selectedHotspot.level))}
+                        {selectedHotspot.metric
+                          ? ` · ${t(METRIC_LABELS[selectedHotspot.metric])} ${selectedHotspot.metricValue}%`
+                          : ` · ${t('Risiko')} ${selectedHotspot.severity}%`}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        play('click')
+                        setSelectedHotspotId(null)
+                      }}
+                      aria-label={t('Tutup informasi')}
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[var(--border-card)] bg-[var(--surface-muted)] text-[10px] text-[var(--text-muted)] transition-colors hover:border-[var(--accent-red)] hover:text-[var(--accent-red)]"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <p className="mt-1.5 text-[10px] leading-snug text-[var(--text-secondary)]">
+                    {t(selectedHotspot.description)}
+                  </p>
+
+                  {selectedHotspotAction && (
+                    <button
+                      type="button"
+                      data-testid="hotspot-action"
+                      onClick={handleHotspotAction}
+                      disabled={!hotspotActionReady}
+                      title={
+                        !hotspotActionReady
+                          ? t('Aksi ini belum bisa dilakukan sekarang.')
+                          : undefined
+                      }
+                      className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-[10px] font-semibold text-[#062016] transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                      style={{ background: hotspotLevelColor(selectedHotspot.level) }}
+                    >
+                      <span aria-hidden="true">{selectedHotspotAction.emoji}</span>
+                      {t('Lakukan: {action}', { action: t(selectedHotspotAction.label) })}
+                      <span className="opacity-70">{formatCost(ACTION_COSTS[selectedHotspotAction.action])}</span>
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* Action feedback pill */}
               <div
@@ -776,10 +975,10 @@ export default function GameplayClient({
               </div>
 
               {/* First-time hint strip */}
-              {!hasActed && !missionComplete && !missionFailed && (
+              {!hasActed && !selectedHotspot && !missionComplete && !missionFailed && (
                 <div className="pointer-events-none absolute inset-x-0 bottom-10 z-10 flex justify-center px-2">
                   <p className="rounded-full bg-[rgba(10,34,26,0.82)] px-3 py-1 text-center text-[10px] leading-none text-[var(--text-secondary)]">
-                    {t('💡 Ketuk peta untuk membaca tile, lalu pilih aksi di bawah.')}
+                    {t('💡 Ketuk peta atau penanda ⚠ untuk melihat masalah, lalu pilih aksi di bawah.')}
                   </p>
                 </div>
               )}
