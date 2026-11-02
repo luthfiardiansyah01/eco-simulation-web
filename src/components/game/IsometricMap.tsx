@@ -1471,13 +1471,13 @@ export default function IsometricMap({
       const radius = Math.max(15, geo.tileW * 0.32)
       let closest: { hotspot: MapHotspot; distance: number } | null = null
 
-      hotspotsRef.current.forEach((hotspot) => {
+      for (const hotspot of hotspotsRef.current) {
         const point = getHotspotPosition(geo, hotspot)
         const distance = Math.hypot(x - point.x, y - point.y)
         if (distance <= radius && (!closest || distance < closest.distance)) {
           closest = { hotspot, distance }
         }
-      })
+      }
 
       return closest
     },
