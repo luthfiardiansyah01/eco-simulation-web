@@ -18,6 +18,7 @@ import {
 } from '@/lib/gameplay/objectives'
 import AchievementToast from '@/components/game/AchievementToast'
 import GameGuide from '@/components/game/GameGuide'
+import GuestProgressBanner from '@/components/auth/GuestProgressBanner'
 import IsometricMap, { type MapActionTrigger } from '@/components/game/IsometricMap'
 import SoundToggle from '@/components/audio/SoundToggle'
 import { useSound } from '@/components/audio/SoundProvider'
@@ -451,10 +452,10 @@ export default function GameplayClient({
     )
   }, [status, treeTarget, droneTarget, pushLog, checkMissionComplete, mission.objectives, missionComplete, missionFailed, play, language, t, showActionFeedback])
 
-  const handleHotspotAction = useCallback(() => {
+  const handleHotspotAction = () => {
     if (!selectedHotspotAction) return
     handleAction(selectedHotspotAction)
-  }, [handleAction, selectedHotspotAction])
+  }
 
   const barColor = (val: number, inv = false) => {
     const v = inv ? 100 - val : val
@@ -692,6 +693,8 @@ export default function GameplayClient({
             </button>
           </div>
         </div>
+
+        <GuestProgressBanner variant="bar" />
 
         {/* Main area: status | map | actions */}
         <div className="flex flex-1 overflow-hidden">

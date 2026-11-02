@@ -1084,8 +1084,10 @@ export default function IsometricMap({
   const selectedHotspotRef = useRef<string | null>(null)
   const hotspotsRef = useRef(hotspots)
 
-  selectedHotspotRef.current = selectedHotspotId ?? null
-  hotspotsRef.current = hotspots
+  useEffect(() => {
+    selectedHotspotRef.current = selectedHotspotId ?? null
+    hotspotsRef.current = hotspots
+  }, [selectedHotspotId, hotspots])
 
   const draw = useCallback(
     (canvas: HTMLCanvasElement, now = performance.now()) => {
@@ -1104,8 +1106,6 @@ export default function IsometricMap({
         side: SIDE,
         rows: ROWS,
         cols: COLS,
-        offsetX,
-        offsetY,
       } = geo
 
       // Sky/ground backdrop

@@ -1,4 +1,5 @@
 import SoundLink from '@/components/audio/SoundLink'
+import GuestProgressBanner from '@/components/auth/GuestProgressBanner'
 import { AdventureSteps, BackLink, Breadcrumbs } from '@/components/layout/Navigation'
 import { MISSIONS, MISSION_LEVELS } from '@/data/regions'
 import {
@@ -57,6 +58,8 @@ export default async function BriefingPage({
 
         {/* Back nav */}
         <BackLink href={`/mission/${regionId}`} label={t('Kembali ke Daftar Misi')} />
+
+        <GuestProgressBanner />
 
         {/* Mission header */}
         <div className={`eco-card ${meta.color} mt-4 mb-4 p-5`}>

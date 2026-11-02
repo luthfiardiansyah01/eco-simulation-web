@@ -119,6 +119,10 @@ const EN: Record<string, string> = {
   'Penyelesaian': 'Completion',
   'untuk menyimpan progress dan membuka level berikutnya secara otomatis.':
     'to save progress and unlock the next level automatically.',
+  'Mode tamu — progress tidak disimpan.':
+    'Guest mode — progress is not saved.',
+  'Masuk agar progress tersimpan.':
+    'Sign in to keep your progress.',
 
   // Briefing
   'Latar Belakang': 'Background',
