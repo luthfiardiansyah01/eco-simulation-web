@@ -27,6 +27,9 @@ const EN: Record<string, string> = {
   '← Kembali sebagai tamu': '← Continue as guest',
   '← Kembali': '← Back',
   'Kembali': 'Back',
+  'Kembali ke Menu': 'Back to Menu',
+  'Kembali ke Region': 'Back to Regions',
+  'Kembali ke Daftar Misi': 'Back to Mission List',
   'Kembali ke Beranda': 'Back to Home',
   'Kembali ke Masuk': 'Back to Sign In',
   'Masuk': 'Sign In',
@@ -85,6 +88,17 @@ const EN: Record<string, string> = {
   'Selamatkan ekosistem sungai Jawa 🌱': "Save Java's river ecosystems 🌱",
   '⚙️ Pengaturan': '⚙️ Settings',
   '❓ Tutorial': '❓ Tutorial',
+  'Beranda': 'Home',
+  'Navigasi halaman': 'Page navigation',
+  'Bermain': 'Play',
+
+  // Adventure progress steps
+  'Briefing': 'Briefing',
+  '★ Lanjut di sini': '★ Continue here',
+  'LANJUTKAN': 'CONTINUE',
+  'BUKA': 'OPEN',
+  'Daftar Misi': 'Mission List',
+  'Level aktif: {level}': 'Active level: {level}',
 
   // Region
   'Pilih wilayah untuk memulai misi': 'Choose a region to start a mission',
@@ -124,6 +138,15 @@ const EN: Record<string, string> = {
   'Kesulitan hanya memengaruhi kondisi awal dan sumber daya. Objektif dan hadiah tetap sama.':
     'Difficulty only affects the starting conditions and resources. Objectives and rewards stay the same.',
   '▶ Mulai Simulasi': '▶ Start Simulation',
+  'Cara Bermain': 'How to Play',
+  'Pantau status lingkungan di panel kiri saat bermain.':
+    'Watch the environment panel on the left while playing.',
+  'Pilih aksi di panel bawah. Setiap aksi memakai kredit atau energi.':
+    'Choose an action in the bottom panel. Each action costs credits or energy.',
+  'Capai semua objektif sebelum sumber daya habis untuk menang.':
+    'Reach every objective before resources run out to win.',
+  '❔ Panduan lengkap juga bisa dibuka kapan saja lewat tombol Panduan di dalam permainan.':
+    '❔ The full guide can also be opened anytime with the Guide button in-game.',
 
   // Difficulty options
   'Mudah': 'Easy',
@@ -231,6 +254,41 @@ const EN: Record<string, string> = {
   'Tanah': 'Soil',
   'Pohon': 'Trees',
   'Cemar': 'Polluted',
+  'Panduan': 'Guide',
+  'Panduan Misi': 'Mission Guide',
+  'Buka panduan': 'Open guide',
+  'Tutup panduan': 'Close guide',
+  'Mengerti': 'Got it',
+  'Cara Menang': 'How to Win',
+  'Selesaikan semua objektif sebelum kredit atau energi habis.':
+    'Complete every objective before credits or energy run out.',
+  'Pantau status lingkungan di panel kiri.':
+    'Watch the environment status in the left panel.',
+  'Capai semua objektif untuk menyelesaikan misi.':
+    'Reach every objective to complete the mission.',
+  'Aksi & Efek': 'Actions & Effects',
+  'Legenda Peta': 'Map Legend',
+  'Ketuk peta untuk membaca kondisi tile.': 'Tap the map to inspect a tile.',
+  'Tips Ranger': 'Ranger Tips',
+  'Prioritaskan aksi yang langsung mendekatkan objektif.':
+    'Prioritize actions that directly advance an objective.',
+  'Simpan kredit untuk Filter dan Tanam Pohon.':
+    'Save credits for Filters and Tree Planting.',
+  'Jika sumber daya habis, reset misi dan coba strategi lain.':
+    'If resources run out, reset the mission and try another strategy.',
+  'Objektif tercapai!': 'Objective complete!',
+  '💡 Ketuk peta untuk membaca tile, lalu pilih aksi di bawah.':
+    '💡 Tap the map to inspect a tile, then pick an action below.',
+  'Peta ekosistem interaktif. Ketuk tile untuk melihat kondisinya.':
+    'Interactive ecosystem map. Tap a tile to inspect its condition.',
+  'Polusi -5%, ikan +3%': 'Pollution -5%, fish +3%',
+  'Pohon +1, bio +2%': 'Trees +1, bio +2%',
+  'Cek kualitas air': 'Check water quality',
+  'Drone +1': 'Drone +1',
+  'Air +8%, ikan +5%': 'Water +8%, fish +5%',
+  'Buka info area': 'Open area info',
+  'Analisis area': 'Analyze area',
+  'Kembali ke basis': 'Return to base',
 
   // Leaderboard
   'Peringkat {rank}': 'Rank {rank}',

@@ -22,7 +22,7 @@ test('guest can navigate from home to gameplay and back', async ({ page }) => {
   await expect(page).toHaveURL(/\/briefing\/west-java\/1$/)
   await expect(page.getByText('Latar Belakang')).toBeVisible()
 
-  await page.getByRole('button', { name: '▶ Mulai Simulasi' }).click()
+  await page.getByRole('link', { name: /Mulai Simulasi/ }).click()
   await expect(page).toHaveURL(/\/play\/west-java\/1\?difficulty=normal$/)
   await expect(page.getByTestId('action-plant_tree')).toBeVisible()
 
@@ -57,6 +57,29 @@ test('gameplay exit dialog can resume or leave for the menu', async ({ page }) =
   await dialog.getByRole('button', { name: 'Keluar ke Menu' }).click()
   await expect(page).toHaveURL(/\/$/)
   await expect(page.getByRole('heading', { name: 'VRASS' })).toBeVisible()
+})
+
+test('in-game guide opens from the top bar and closes with Escape or the CTA', async ({
+  page,
+}) => {
+  await openLevelOne(page)
+
+  const guide = page.getByTestId('game-guide')
+  await expect(guide).toHaveCount(0)
+
+  await page.getByTestId('open-guide').click()
+  await expect(guide).toBeVisible()
+  await expect(guide.getByRole('heading', { name: 'Panduan Misi' })).toBeVisible()
+  await expect(guide.getByRole('heading', { name: 'Cara Menang' })).toBeVisible()
+  await expect(guide.getByRole('heading', { name: 'Legenda Peta' })).toBeVisible()
+
+  await page.keyboard.press('Escape')
+  await expect(guide).toHaveCount(0)
+
+  await page.getByTestId('open-guide').click()
+  await expect(guide).toBeVisible()
+  await guide.getByRole('button', { name: 'Mengerti' }).click()
+  await expect(guide).toHaveCount(0)
 })
 
 test('home tutorial can be reopened manually', async ({ page }) => {

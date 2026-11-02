@@ -1,4 +1,5 @@
 import SoundLink from '@/components/audio/SoundLink'
+import { AdventureSteps, BackLink, Breadcrumbs } from '@/components/layout/Navigation'
 import { MISSIONS, MISSION_LEVELS } from '@/data/regions'
 import { notFound } from 'next/navigation'
 import { getProgressServer } from '@/lib/supabase/progress-server'
@@ -42,30 +43,38 @@ export default async function MissionPage({ params }: { params: Promise<{ region
   const completionPct = Math.round((completedLevels.length / baseLevels.length) * 100)
 
   return (
-    <main className="min-h-screen p-6 relative overflow-hidden">
-      <div className="absolute bottom-[-60px] left-[-60px] w-72 h-72 rounded-full bg-[var(--decor-teal)] blur-3xl pointer-events-none" />
+    <main className="relative min-h-screen overflow-hidden p-6">
+      <div className="pointer-events-none absolute bottom-[-60px] left-[-60px] h-72 w-72 rounded-full bg-[var(--decor-teal)] blur-3xl" />
 
-      <div className="max-w-4xl mx-auto relative z-10">
+      <div className="relative z-10 mx-auto max-w-4xl">
 
         {/* Header */}
         <div className="mb-6">
-          <SoundLink href="/region" className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)] hover:text-[var(--accent-green)] transition-colors mb-4">
-            {t('← Kembali ke Region')}
-          </SoundLink>
+          <BackLink href="/region" label={t('Kembali ke Region')} />
 
-          <div className={`eco-card ${meta.color} p-5 mb-5`}>
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-3">
-                <span className="text-4xl">{meta.emoji}</span>
-                <div>
-                  <h1 className="text-xl font-bold text-foreground">{meta.name}</h1>
-                  <p className="text-xs text-[var(--text-muted)]">{t('Pilih level misi untuk dimulai')}</p>
+          <div className={`eco-card ${meta.color} mt-4 mb-5 p-5`}>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="min-w-0">
+                <Breadcrumbs
+                  items={[
+                    { label: t('Beranda'), href: '/' },
+                    { label: t('Mode Petualangan'), href: '/region' },
+                    { label: meta.name },
+                  ]}
+                  ariaLabel={t('Navigasi halaman')}
+                />
+                <div className="mt-1 flex items-center gap-3">
+                  <span className="text-4xl" aria-hidden="true">{meta.emoji}</span>
+                  <div>
+                    <h1 className="text-xl font-bold text-foreground">{meta.name}</h1>
+                    <p className="text-xs text-[var(--text-muted)]">{t('Pilih level misi untuk dimulai')}</p>
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-4 text-sm">
                 {progress && (
                   <div className="flex items-center gap-1.5">
-                    <span className="text-lg">⭐</span>
+                    <span className="text-lg" aria-hidden="true">⭐</span>
                     <div>
                       <p className="text-xs text-[var(--text-muted)]">{t('Poin Riset')}</p>
                       <p className="font-bold text-[var(--accent-amber)]">{progress.researchPoints} {t('pts')}</p>
@@ -86,66 +95,107 @@ export default async function MissionPage({ params }: { params: Promise<{ region
 
             {/* Progress bar */}
             <div className="mt-4">
-              <div className="flex justify-between text-xs mb-1.5">
+              <div className="mb-1.5 flex justify-between text-xs">
                 <span className="text-[var(--text-muted)]">{t('Penyelesaian')}</span>
-                <span className="text-[var(--accent-green)]">{completionPct}%</span>
+                <span className="font-semibold text-[var(--accent-green)]">{completionPct}%</span>
               </div>
               <div className="progress-bar-bg h-2">
                 <div className="progress-bar-fill h-2" style={{ width: `${completionPct}%` }} />
               </div>
             </div>
+
+            <div className="mt-4 border-t border-[var(--border-card)] pt-3">
+              <AdventureSteps
+                steps={[t('Wilayah'), t('Misi'), t('Briefing'), t('Bermain')]}
+                current={1}
+              />
+            </div>
           </div>
         </div>
 
+        {/* Current level guidance */}
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-foreground">{t('Daftar Misi')}</h2>
+          <p className="text-[11px] text-[var(--text-muted)]">
+            {t('Level aktif: {level}', { level: Math.min(currentLevel, baseLevels.length) })}
+          </p>
+        </div>
+
         {/* Mission grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-          {levels.map((level) => (
-            <div key={level.id}>
-              {level.unlocked ? (
-                <SoundLink href={`/briefing/${regionId}/${level.id}`} sound="start">
-                  <div className={`eco-card p-3 cursor-pointer h-full flex flex-col items-center text-center
-                    ${level.completed ? 'border-green-700/60' : 'border-[var(--border-glow)]/40'}`}>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+          {levels.map((level) => {
+            const isCurrent = level.id === currentLevel && !level.completed
 
-                    {/* Level number */}
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold mb-2
-                      ${level.completed
-                        ? 'bg-[var(--surface-selected)] text-[var(--accent-green)]'
-                        : 'bg-[var(--surface-muted)] text-[var(--accent-teal)]'}`}>
-                      {level.completed ? '✓' : level.id}
+            return (
+              <div key={level.id}>
+                {level.unlocked ? (
+                  <SoundLink
+                    href={`/briefing/${regionId}/${level.id}`}
+                    sound="start"
+                    className="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-teal)]"
+                  >
+                    <div
+                      className={`eco-card card-lift flex h-full cursor-pointer flex-col items-center p-3 text-center ${
+                        level.completed
+                          ? 'border-green-700/60'
+                          : isCurrent
+                            ? 'border-[var(--accent-teal)]'
+                            : 'border-[var(--border-glow)]/40'
+                      }`}
+                      style={isCurrent ? { boxShadow: 'var(--glow-teal)' } : undefined}
+                    >
+                      {isCurrent && (
+                        <span className="mb-1 rounded-full bg-[var(--surface-selected)] px-2 py-0.5 text-[9px] font-semibold text-[var(--accent-teal)]">
+                          {t('LANJUTKAN')}
+                        </span>
+                      )}
+
+                      {/* Level number */}
+                      <div
+                        className={`mb-2 flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${
+                          level.completed
+                            ? 'bg-[var(--surface-selected)] text-[var(--accent-green)]'
+                            : isCurrent
+                              ? 'bg-[var(--accent-teal)] text-[#062016]'
+                              : 'bg-[var(--surface-muted)] text-[var(--accent-teal)]'
+                        }`}
+                      >
+                        {level.completed ? '✓' : level.id}
+                      </div>
+
+                      <p className="mb-2 flex-1 text-[11px] leading-tight text-[var(--text-secondary)]">
+                        {level.title}
+                      </p>
+
+                      <span className={`badge text-[9px] ${level.completed ? 'badge-green' : 'badge-teal'}`}>
+                        {level.completed ? t('SELESAI') : isCurrent ? t('MAIN') : t('BUKA')}
+                      </span>
                     </div>
-
-                    <p className="text-[11px] text-[var(--text-secondary)] leading-tight flex-1 mb-2">
-                      {level.title}
+                  </SoundLink>
+                ) : (
+                  <div className="eco-card flex h-full flex-col items-center p-3 text-center opacity-40">
+                    <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface-muted)] text-sm text-[var(--text-muted)]">
+                      🔒
+                    </div>
+                    <p className="mb-2 flex-1 text-[11px] leading-tight text-[var(--text-muted)]">
+                      {level.title === 'Coming Soon' || level.title === 'Segera Hadir'
+                        ? '???'
+                        : level.title}
                     </p>
-
-                    <span className={`badge text-[9px] ${level.completed ? 'badge-green' : 'badge-teal'}`}>
-                      {level.completed ? t('SELESAI') : t('MAIN')}
-                    </span>
+                    <span className="badge badge-gray text-[9px]">{t('TERKUNCI')}</span>
                   </div>
-                </SoundLink>
-              ) : (
-                <div className="eco-card p-3 opacity-40 flex flex-col items-center text-center">
-                  <div className="w-10 h-10 rounded-full bg-[var(--surface-muted)] flex items-center justify-center text-[var(--text-muted)] text-sm mb-2">
-                    🔒
-                  </div>
-                  <p className="text-[11px] text-[var(--text-muted)] leading-tight flex-1 mb-2">
-                    {level.title === 'Coming Soon' || level.title === 'Segera Hadir'
-                      ? '???'
-                      : level.title}
-                  </p>
-                  <span className="badge badge-gray text-[9px]">{t('TERKUNCI')}</span>
-                </div>
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            )
+          })}
         </div>
 
         {/* Guest hint */}
         {!progress && (
-          <div className="mt-5 eco-card p-4 flex items-center gap-3 border-[var(--accent-amber)]/30">
-            <span className="text-xl">💡</span>
+          <div className="eco-card mt-5 flex items-center gap-3 border-[var(--accent-amber)]/30 p-4">
+            <span className="text-xl" aria-hidden="true">💡</span>
             <p className="text-xs text-[var(--text-muted)]">
-              <SoundLink href="/login" className="text-[var(--accent-amber)] hover:underline font-medium">
+              <SoundLink href="/login" className="font-medium text-[var(--accent-amber)] hover:underline">
                 {t('Masuk')}
               </SoundLink>{' '}
               {t('untuk menyimpan progress dan membuka level berikutnya secara otomatis.')}

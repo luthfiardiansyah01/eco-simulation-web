@@ -63,6 +63,12 @@ type ActiveActionEffect = {
   particles: EffectParticle[]
 }
 
+type TapEffect = {
+  x: number
+  y: number
+  start: number
+}
+
 const TILE_COORDS = MAP.flatMap((row, rowIndex) =>
   row.map((type, colIndex) => ({ type, row: rowIndex, col: colIndex }))
 )
@@ -99,7 +105,12 @@ function easeOutCubic(value: number) {
 }
 
 function getMapGeometry(width: number, height: number): MapGeometry {
-  const tileW = width < 360 ? 36 : width < 480 ? 46 : 58
+  // Scale the isometric grid to the smaller of the available width and height
+  // so it stays crisp and fully visible on both phones and desktops.
+  const tileW = Math.max(
+    34,
+    Math.min(78, Math.floor(Math.min(width / 8.2, height / 4.2)))
+  )
   const tileH = tileW / 2
   const side = Math.round(tileH * 0.45)
   const rows = MAP.length
@@ -405,6 +416,38 @@ function drawActionEffect(
   ctx.restore()
 }
 
+function drawTapEffects(
+  ctx: CanvasRenderingContext2D,
+  effects: TapEffect[],
+  now: number,
+  geo: MapGeometry
+) {
+  for (let index = effects.length - 1; index >= 0; index--) {
+    const effect = effects[index]
+    const t = (now - effect.start) / 520
+
+    if (t >= 1) {
+      effects.splice(index, 1)
+      continue
+    }
+
+    const grow = easeOutCubic(t)
+    ctx.strokeStyle = `rgba(134,239,172,${0.55 * (1 - t)})`
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.ellipse(
+      effect.x,
+      effect.y,
+      geo.tileW * (0.15 + grow * 0.36),
+      geo.tileH * (0.13 + grow * 0.32),
+      0,
+      0,
+      Math.PI * 2
+    )
+    ctx.stroke()
+  }
+}
+
 function drawActionEffects(
   ctx: CanvasRenderingContext2D,
   effects: ActiveActionEffect[],
@@ -439,17 +482,23 @@ export default function IsometricMap({
   const { t } = useI18n()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animRef = useRef<number>(0)
-  const rippleRef = useRef<number>(0)
+  const sizeRef = useRef({ width: 360, height: 260 })
+  const dprRef = useRef(1)
+  const lastFrameRef = useRef(0)
   const particlesRef = useRef<{ x: number; y: number; vx: number; vy: number; phase: number }[]>([])
   const actionEffectsRef = useRef<ActiveActionEffect[]>([])
+  const tapEffectsRef = useRef<TapEffect[]>([])
   const actionSeqRef = useRef(0)
 
   const draw = useCallback((canvas: HTMLCanvasElement, now = performance.now()) => {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const W = canvas.width
-    const H = canvas.height
+    const { width: W, height: H } = sizeRef.current
+    const dpr = dprRef.current
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.clearRect(0, 0, W, H)
+
     const geo = getMapGeometry(W, H)
     const {
       tileW: TILE_W,
@@ -532,7 +581,7 @@ export default function IsometricMap({
 
         // Water ripple
         if (tileType === 0) {
-          const phase = (rippleRef.current / 60 + row * 0.3 + col * 0.2) % 1
+          const phase = (now / 2400 + row * 0.18 + col * 0.12) % 1
           ctx.strokeStyle = `rgba(77,212,240,${0.15 + phase * 0.1})`
           ctx.lineWidth = 1
           ctx.beginPath()
@@ -581,11 +630,14 @@ export default function IsometricMap({
 
     // Action feedback animations
     drawActionEffects(ctx, actionEffectsRef.current, now, geo)
+    drawTapEffects(ctx, tapEffectsRef.current, now, geo)
 
     // Legend
-    const legendY = H - 18
+    const legendY = H - 22
     const itemW = Math.floor(W / 4)
-    const fontSize = W < 360 ? 8 : 9
+    const fontSize = W < 360 ? 9 : 10
+    ctx.fillStyle = 'rgba(10,26,20,0.72)'
+    ctx.fillRect(0, H - 28, W, 28)
     ctx.font = `${fontSize}px Arial`
     const legendItems = [
       { color: waterColor, label: t('Sungai') },
@@ -611,7 +663,7 @@ export default function IsometricMap({
     const canvas = canvasRef.current
     if (!canvas) return
 
-    const geo = getMapGeometry(canvas.width, canvas.height)
+    const geo = getMapGeometry(sizeRef.current.width, sizeRef.current.height)
     actionSeqRef.current += 1
 
     const tile = pickActionTile(action, actionSeqRef.current)
@@ -639,8 +691,7 @@ export default function IsometricMap({
   // Init particles
   useEffect(() => {
     if (!canvasRef.current) return
-    const W = canvasRef.current.width
-    const H = canvasRef.current.height
+    const { width: W, height: H } = sizeRef.current
     const count = Math.min(6, Math.floor(biodiversity / 15))
     particlesRef.current = Array.from({ length: count }, () => ({
       x: 30 + Math.random() * (W - 60),
@@ -657,22 +708,25 @@ export default function IsometricMap({
     if (!canvas) return
 
     let running = true
-    const loop = () => {
-      if (!running) return
-      rippleRef.current = (rippleRef.current + 1) % 60
+    lastFrameRef.current = performance.now()
 
-      // Update particles
-      const W = canvas.width
-      const H = canvas.height
+    const loop = (now: number) => {
+      if (!running) return
+
+      const elapsed = now - lastFrameRef.current
+      const dt = Math.min(2.5, Math.max(0.25, elapsed / 16.667))
+      lastFrameRef.current = now
+
+      const { width: W, height: H } = sizeRef.current
       particlesRef.current.forEach((p) => {
-        p.x += p.vx
-        p.y += p.vy
-        p.phase += 0.04
+        p.x += p.vx * dt
+        p.y += p.vy * dt
+        p.phase += 0.04 * dt
         if (p.x < 10 || p.x > W - 10) p.vx *= -1
         if (p.y < 10 || p.y > H - 10) p.vy *= -1
       })
 
-      draw(canvas, performance.now())
+      draw(canvas, now)
       animRef.current = requestAnimationFrame(loop)
     }
 
@@ -690,66 +744,85 @@ export default function IsometricMap({
     const parent = canvas.parentElement
     if (!parent) return
 
-    const observer = new ResizeObserver(() => {
-      canvas.width = parent.offsetWidth || 360
-      canvas.height = parent.offsetHeight || 260
-    })
-    observer.observe(parent)
+    const resize = () => {
+      const width = parent.clientWidth || 360
+      const height = parent.clientHeight || 260
+      const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1))
 
-    // Initial size
-    canvas.width = parent.offsetWidth || 360
-    canvas.height = parent.offsetHeight || 260
+      sizeRef.current = { width, height }
+      dprRef.current = dpr
+      canvas.width = Math.round(width * dpr)
+      canvas.height = Math.round(height * dpr)
+    }
+
+    resize()
+    const observer = new ResizeObserver(resize)
+    observer.observe(parent)
 
     return () => observer.disconnect()
   }, [])
 
-  // Touch/click handler
-  const handleInteraction = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+  // Pointer interaction. using pointerdown only avoids the duplicate
+  // touchstart + synthetic click events that mobile browsers fire.
+  const handleInteraction = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.preventDefault()
     const canvas = canvasRef.current
     if (!canvas) return
     const rect = canvas.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
 
-    let clientX: number, clientY: number
-    if ('touches' in e) {
-      clientX = e.touches[0].clientX
-      clientY = e.touches[0].clientY
-    } else {
-      clientX = e.clientX
-      clientY = e.clientY
-    }
-
-    const scaleX = canvas.width / rect.width
-    const scaleY = canvas.height / rect.height
-    const x = (clientX - rect.left) * scaleX
-    const y = (clientY - rect.top) * scaleY
-
-    const geo = getMapGeometry(canvas.width, canvas.height)
+    const geo = getMapGeometry(rect.width, rect.height)
     const { rows: ROWS, cols: COLS, tileW: TILE_W } = geo
 
     // Find closest tile
-    let closest = { dist: Infinity, type: 1 }
+    let closest = { dist: Infinity, type: 1, row: 0, col: 0 }
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
         const center = getTileCenter(geo, row, col)
         const dist = Math.hypot(x - center.x, y - center.y)
         if (dist < closest.dist) {
-          closest = { dist, type: MAP[row][col] }
+          closest = { dist, type: MAP[row][col], row, col }
         }
       }
     }
 
     if (closest.dist < TILE_W) {
+      const center = getTileCenter(geo, closest.row, closest.col)
+      tapEffectsRef.current = [
+        ...tapEffectsRef.current.slice(-4),
+        { x: center.x, y: center.y, start: performance.now() },
+      ]
       onTileClick?.(TILE_TYPES[closest.type] ?? 'unknown')
     }
+  }, [onTileClick])
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLCanvasElement>) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return
+    e.preventDefault()
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const rect = canvas.getBoundingClientRect()
+    const geo = getMapGeometry(rect.width, rect.height)
+    const center = getTileCenter(geo, 0, 0)
+    tapEffectsRef.current = [
+      ...tapEffectsRef.current.slice(-4),
+      { x: center.x, y: center.y, start: performance.now() },
+    ]
+    onTileClick?.('water')
   }, [onTileClick])
 
   return (
     <canvas
       ref={canvasRef}
-      className="w-full h-full block"
+      className="block h-full w-full cursor-crosshair"
       style={{ touchAction: 'none' }}
-      onClick={handleInteraction}
-      onTouchStart={handleInteraction}
+      onPointerDown={handleInteraction}
+      onKeyDown={handleKeyDown}
+      onContextMenu={(event) => event.preventDefault()}
+      role="button"
+      tabIndex={0}
+      aria-label={t('Peta ekosistem interaktif. Ketuk tile untuk melihat kondisinya.')}
     />
   )
 }

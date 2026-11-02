@@ -5,6 +5,11 @@ const nextConfig: NextConfig = {
     agentUpgrade: 'security',
   },
   allowedDevOrigins: ['192.168.18.10'],
+  images: {
+    // Next.js 16 only allows qualities listed here. Region art benefits from
+    // the sharper 90 setting while every other image keeps the default 75.
+    qualities: [75, 90],
+  },
   turbopack: {
     rules: {
       '*.css': {

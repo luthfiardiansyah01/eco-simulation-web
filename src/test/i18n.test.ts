@@ -32,6 +32,19 @@ describe('i18n translator', () => {
     expect(translate('en', 'Lanjut Bermain')).toBe('Keep Playing')
     expect(translate('en', 'Keluar Aplikasi')).toBe('Exit App')
     expect(translate('en', 'Keluar dari Aplikasi?')).toBe('Exit App?')
+    expect(translate('en', 'Panduan Misi')).toBe('Mission Guide')
+    expect(translate('en', 'Cara Bermain')).toBe('How to Play')
+    expect(translate('en', 'Legenda Peta')).toBe('Map Legend')
+    expect(translate('en', 'Mengerti')).toBe('Got it')
+    expect(translate('en', 'Beranda')).toBe('Home')
+    expect(translate('en', 'Kembali ke Menu')).toBe('Back to Menu')
+    expect(translate('en', 'Kembali ke Region')).toBe('Back to Regions')
+    expect(translate('en', 'Kembali ke Daftar Misi')).toBe('Back to Mission List')
+    expect(translate('en', 'LANJUTKAN')).toBe('CONTINUE')
+    expect(translate('en', 'Level aktif: {level}', { level: 2 })).toBe(
+      'Active level: 2'
+    )
+    expect(translate('en', 'Objektif tercapai!')).toBe('Objective complete!')
     expect(translate('en', 'Belum ada terjemahan')).toBe('Belum ada terjemahan')
   })
 

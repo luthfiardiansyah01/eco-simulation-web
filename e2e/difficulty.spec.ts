@@ -16,15 +16,16 @@ async function expectStartingStats(
   }
 ) {
   await expect(page.getByText(`Mode ${label}`)).toBeVisible()
-  await expect(page.getByText(values.pollution, { exact: true })).toBeVisible()
-  await expect(page.getByText(values.biodiversity, { exact: true })).toBeVisible()
-  await expect(page.getByText(values.water, { exact: true })).toBeVisible()
-  await expect(page.getByText(values.fish, { exact: true })).toBeVisible()
-  await expect(page.getByText(values.trees, { exact: true })).toBeVisible()
-  await expect(page.getByText(values.credits, { exact: true })).toBeVisible()
-  await expect(page.getByText(values.energy, { exact: true })).toBeVisible()
+  const stats = page.getByTestId('starting-stats')
+  await expect(stats.getByText(values.pollution, { exact: true })).toBeVisible()
+  await expect(stats.getByText(values.biodiversity, { exact: true })).toBeVisible()
+  await expect(stats.getByText(values.water, { exact: true })).toBeVisible()
+  await expect(stats.getByText(values.fish, { exact: true })).toBeVisible()
+  await expect(stats.getByText(values.trees, { exact: true })).toBeVisible()
+  await expect(stats.getByText(values.credits, { exact: true })).toBeVisible()
+  await expect(stats.getByText(values.energy, { exact: true })).toBeVisible()
   if (values.drones) {
-    await expect(page.getByText(values.drones, { exact: true })).toBeVisible()
+    await expect(stats.getByText(values.drones, { exact: true })).toBeVisible()
   }
 }
 
@@ -73,7 +74,7 @@ test('difficulty selection changes starting values and the gameplay URL', async 
     drones: '2',
   })
 
-  await page.getByRole('button', { name: '▶ Mulai Simulasi' }).click()
+  await page.getByRole('link', { name: /Mulai Simulasi/ }).click()
   await expect(page).toHaveURL(/\/play\/west-java\/1\?difficulty=hard$/)
   await expect(page.getByTestId('env-pollution')).toHaveText('82%')
   await expect(page.getByTestId('env-biodiversity')).toHaveText('16%')

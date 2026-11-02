@@ -17,6 +17,7 @@ import {
   objectiveTarget,
 } from '@/lib/gameplay/objectives'
 import AchievementToast from '@/components/game/AchievementToast'
+import GameGuide from '@/components/game/GameGuide'
 import IsometricMap, { type MapActionTrigger } from '@/components/game/IsometricMap'
 import SoundToggle from '@/components/audio/SoundToggle'
 import { useSound } from '@/components/audio/SoundProvider'
@@ -36,6 +37,12 @@ import {
 
 type ActionDefinition = { emoji: string; label: string; action: GameAction }
 type SaveState = 'idle' | 'saving' | 'saved' | 'guest' | 'error'
+type ActionFeedback = {
+  id: number
+  emoji: string
+  label: string
+  detail?: string
+}
 
 const ACTIONS: ActionDefinition[] = [
   { emoji: '🗑️', label: 'Bersihkan',   action: 'clean_waste'  },
@@ -101,7 +108,12 @@ export default function GameplayClient({
   const [saveError, setSaveError] = useState('')
   const [newAchievements, setNewAchievements] = useState<Achievement[]>([])
   const [showExitConfirm, setShowExitConfirm] = useState(false)
+  const [showGuide, setShowGuide] = useState(false)
+  const [hasActed, setHasActed] = useState(false)
+  const [actionFeedback, setActionFeedback] = useState<ActionFeedback | null>(null)
   const logSeq = useRef(0)
+  const feedbackSeq = useRef(0)
+  const feedbackTimer = useRef<number | null>(null)
   const startedRef = useRef(false)
   const completionGuardRef = useRef(false)
   const mapActionRef = useRef<MapActionTrigger | null>(null)
@@ -200,6 +212,7 @@ export default function GameplayClient({
     setSaveState('idle')
     setSaveError('')
     setNewAchievements([])
+    setHasActed(false)
     logSeq.current = 0
     pushLog('info', t('Misi direset. Sumber daya dan lingkungan dipulihkan.'))
     play('click')
@@ -221,6 +234,32 @@ export default function GameplayClient({
     // Browsers cannot close a normal tab. Fall back to the main menu.
     router.push('/')
   }, [play, router])
+
+  const closeGuide = useCallback(() => setShowGuide(false), [])
+
+  useEffect(() => {
+    return () => {
+      if (feedbackTimer.current !== null) {
+        window.clearTimeout(feedbackTimer.current)
+      }
+    }
+  }, [])
+
+  const showActionFeedback = useCallback(
+    (emoji: string, label: string, detail?: string) => {
+      feedbackSeq.current += 1
+      setActionFeedback({ id: feedbackSeq.current, emoji, label, detail })
+
+      if (feedbackTimer.current !== null) {
+        window.clearTimeout(feedbackTimer.current)
+      }
+      feedbackTimer.current = window.setTimeout(() => {
+        setActionFeedback(null)
+        feedbackTimer.current = null
+      }, 1800)
+    },
+    []
+  )
 
   const persistMission = useCallback(async (snapshot: EnvironmentStatus) => {
     setSaveState('saving')
@@ -332,8 +371,30 @@ export default function GameplayClient({
     )
     mapActionRef.current?.(definition.action)
     setStatus(result.status)
+    setHasActed(true)
     play(ACTION_SOUNDS[definition.action])
     pushLog(result.type, result.message)
+
+    const newlyCompleted = mission.objectives.filter(
+      (objective) =>
+        !isObjectiveComplete(objective, status)
+        && isObjectiveComplete(objective, result.status)
+    )
+
+    if (newlyCompleted.length > 0) {
+      showActionFeedback(
+        '✅',
+        t('Objektif tercapai!'),
+        newlyCompleted.map((objective) => objective.label).join(' · ')
+      )
+    } else {
+      const costLabel = formatCost(cost)
+      showActionFeedback(
+        definition.emoji,
+        label,
+        costLabel === '—' ? undefined : costLabel
+      )
+    }
 
     // Status only changes through this handler, so evaluate completion here
     // instead of triggering a cascading state update from an effect.
@@ -341,7 +402,7 @@ export default function GameplayClient({
       result.status,
       missionProgressPercent(mission.objectives, result.status)
     )
-  }, [status, treeTarget, droneTarget, pushLog, checkMissionComplete, mission.objectives, missionComplete, missionFailed, play, language, t])
+  }, [status, treeTarget, droneTarget, pushLog, checkMissionComplete, mission.objectives, missionComplete, missionFailed, play, language, t, showActionFeedback])
 
   const barColor = (val: number, inv = false) => {
     const v = inv ? 100 - val : val
@@ -376,6 +437,14 @@ export default function GameplayClient({
 
       <div id="gameplay-root" className="flex flex-col" style={{ background: 'var(--background)', color: 'var(--foreground)', width: '100%', height: '100dvh', overflow: 'hidden' }}>
         <AchievementToast achievements={newAchievements} />
+
+        <GameGuide
+          open={showGuide}
+          onClose={closeGuide}
+          mission={mission}
+          difficulty={difficulty}
+          actions={ACTIONS}
+        />
 
         {/* Exit confirmation */}
         {showExitConfirm && (
@@ -504,33 +573,50 @@ export default function GameplayClient({
         )}
 
         {/* Top bar */}
-        <div className="flex items-center justify-between px-3 py-1.5 border-b flex-shrink-0" style={{ borderColor: 'var(--border-card)', background: 'var(--bg-card)' }}>
-          <div className="flex items-center gap-2 min-w-0">
+        <div className="flex flex-shrink-0 items-center gap-2 border-b px-3 py-2" style={{ borderColor: 'var(--border-card)', background: 'var(--bg-card)' }}>
+          <div className="flex min-w-0 max-w-[40%] items-center gap-2">
             <span className="text-base">🌿</span>
             <div className="min-w-0">
-              <p className="text-xs font-semibold text-foreground truncate">{mission.title}</p>
-              <p className="text-[9px] text-[var(--text-muted)]">
+              <p className="truncate text-[13px] font-semibold text-foreground">{mission.title}</p>
+              <p className="truncate text-[10px] text-[var(--text-muted)]">
                 {mission.location} · Lv.{level} ·{' '}
                 <span style={{ color: difficultyMeta.accent }}>{t(difficultyMeta.label)}</span>
               </p>
             </div>
           </div>
           {/* Progress bar */}
-          <div className="flex items-center gap-2 flex-1 mx-3">
-            <div className="flex-1 h-1.5 rounded-full" style={{ background: 'var(--track-bg)' }}>
+          <div className="flex min-w-[72px] flex-1 items-center gap-2">
+            <div className="h-1.5 flex-1 rounded-full" style={{ background: 'var(--track-bg)' }}>
               <div className="h-1.5 rounded-full transition-all" style={{ width: `${progress}%`, background: 'linear-gradient(90deg,#16a34a,#2dd4bf)', boxShadow: '0 0 6px rgba(45,212,191,0.5)' }} />
             </div>
-            <span data-testid="mission-progress" className="text-[10px] text-[var(--accent-amber)] font-bold whitespace-nowrap">{progress}%</span>
+            <span data-testid="mission-progress" className="whitespace-nowrap text-[11px] font-bold text-[var(--accent-amber)]">{progress}%</span>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="badge badge-green text-[9px]">● {t('LIVE')}</span>
+          <div className="flex flex-shrink-0 items-center gap-1.5">
+            <span className="badge badge-green hidden text-[9px] md:inline-flex">● {t('LIVE')}</span>
+            <button
+              type="button"
+              data-testid="open-guide"
+              onClick={() => {
+                play('click')
+                setShowGuide(true)
+              }}
+              className="flex h-8 items-center gap-1 rounded-lg border border-[var(--border-card)] bg-[var(--surface-muted)] px-2 text-[10px] font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--accent-teal)] hover:text-[var(--accent-teal)] active:scale-95"
+              title={t('Buka panduan')}
+              aria-label={t('Buka panduan')}
+            >
+              <span aria-hidden="true">❔</span>
+              <span className="hidden sm:inline">{t('Panduan')}</span>
+            </button>
             <SoundToggle floating={false} />
             <Link
               href={`/briefing/${regionId}/${level}?difficulty=${difficulty}`}
-              className="badge badge-gray text-[9px]"
+              className="flex h-8 items-center gap-1 rounded-lg border border-[var(--border-card)] bg-[var(--surface-muted)] px-2 text-[10px] font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--accent-green)] hover:text-[var(--accent-green)]"
+              title={t('Kembali ke Briefing')}
+              aria-label={t('Kembali ke Briefing')}
               onClick={() => play('click')}
             >
-              ⏸
+              <span aria-hidden="true">📋</span>
+              <span className="hidden sm:inline">{t('Briefing')}</span>
             </Link>
             <button
               type="button"
@@ -539,7 +625,7 @@ export default function GameplayClient({
                 play('click')
                 setShowExitConfirm(true)
               }}
-              className="flex min-h-[32px] items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-bold cursor-pointer transition-all hover:brightness-110 active:scale-95"
+              className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold cursor-pointer transition-all hover:brightness-110 active:scale-95"
               style={{
                 background: 'rgba(248, 113, 113, 0.2)',
                 border: '1px solid rgba(248, 113, 113, 0.65)',
@@ -559,58 +645,62 @@ export default function GameplayClient({
         <div className="flex flex-1 overflow-hidden">
 
           {/* Left: status panel */}
-          <div className="flex flex-col border-r overflow-y-auto flex-shrink-0" style={{ width: '110px', borderColor: 'var(--border-card)', background: 'var(--bg-card)' }}>
-            <div className="p-2 space-y-3">
-              {/* Env bars */}
+          <div className="flex flex-col overflow-y-auto border-r flex-shrink-0" style={{ width: '150px', borderColor: 'var(--border-card)', background: 'var(--bg-card)' }}>
+            <div className="space-y-2.5 p-2.5">
+              {/* Env bars — two compact columns keep objectives visible on short screens */}
               <div>
-                <p className="text-[8px] text-[var(--text-muted)] uppercase tracking-widest mb-1.5">{t('Lingkungan')}</p>
-                {[
-                  { key: 'pollution',     label: t('Polusi'), val: status.pollution,     inv: true,  emoji: '☁️' },
-                  { key: 'biodiversity',  label: t('Bio'),    val: status.biodiversity,  inv: false, emoji: '🦋' },
-                  { key: 'waterQuality',  label: t('Air'),    val: status.waterQuality,  inv: false, emoji: '💧' },
-                  { key: 'fishPopulation',label: t('Ikan'),   val: status.fishPopulation,inv: false, emoji: '🐟' },
-                ].map(({ key, label, val, inv, emoji }) => (
-                  <div key={key} className="mb-2">
-                    <div className="flex justify-between items-center mb-0.5">
-                      <span className="text-[9px] text-[var(--text-muted)]">{emoji} {label}</span>
-                      <span data-testid={`env-${key}`} className="text-[9px] font-medium text-foreground">{val}%</span>
+                <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">{t('Lingkungan')}</p>
+                <div className="grid grid-cols-2 gap-x-2 gap-y-1.5">
+                  {[
+                    { key: 'pollution',     label: t('Polusi'), val: status.pollution,     inv: true,  emoji: '☁️' },
+                    { key: 'biodiversity',  label: t('Bio'),    val: status.biodiversity,  inv: false, emoji: '🦋' },
+                    { key: 'waterQuality',  label: t('Air'),    val: status.waterQuality,  inv: false, emoji: '💧' },
+                    { key: 'fishPopulation',label: t('Ikan'),   val: status.fishPopulation,inv: false, emoji: '🐟' },
+                  ].map(({ key, label, val, inv, emoji }) => (
+                    <div key={key} title={`${label}: ${val}%`}>
+                      <div className="flex items-center justify-between gap-0.5">
+                        <span className="truncate text-[9px] text-[var(--text-muted)]">{emoji} {label}</span>
+                        <span data-testid={`env-${key}`} className="text-[9px] font-semibold text-foreground">{val}%</span>
+                      </div>
+                      <div className="mt-0.5 h-1 rounded-full" style={{ background: 'var(--track-bg)' }}>
+                        <div className="h-1 rounded-full transition-all" style={{ width: `${val}%`, background: barColor(val, inv) }} />
+                      </div>
                     </div>
-                    <div className="h-1 rounded-full" style={{ background: 'var(--track-bg)' }}>
-                      <div className="h-1 rounded-full transition-all" style={{ width: `${val}%`, background: barColor(val, inv) }} />
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
 
               {/* Resources */}
-              <div className="space-y-1">
-                <p className="text-[8px] text-[var(--text-muted)] uppercase tracking-widest mb-1">{t('Sumber Daya')}</p>
-                {[
-                  { key: 'trees',   icon: '🌳', label: `${status.trees}/${treeTarget}` },
-                  { key: 'energy',  icon: '⚡', label: `${status.energy}` },
-                  { key: 'credits', icon: '💰', label: `${status.credits}` },
-                  { key: 'drones',  icon: '🚁', label: `${status.drones}/${droneTarget}` },
-                ].map(({ key, icon, label }) => (
-                  <div key={key} className="flex justify-between text-[9px]">
-                    <span>{icon}</span>
-                    <span data-testid={`resource-${key}`} className="text-foreground font-medium">{label}</span>
-                  </div>
-                ))}
+              <div>
+                <p className="mb-1 text-[9px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">{t('Sumber Daya')}</p>
+                <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                  {[
+                    { key: 'trees',   icon: '🌳', label: `${status.trees}/${treeTarget}` },
+                    { key: 'energy',  icon: '⚡', label: `${status.energy}` },
+                    { key: 'credits', icon: '💰', label: `${status.credits}` },
+                    { key: 'drones',  icon: '🚁', label: `${status.drones}/${droneTarget}` },
+                  ].map(({ key, icon, label }) => (
+                    <div key={key} className="flex items-center gap-1 text-[10px]">
+                      <span aria-hidden="true">{icon}</span>
+                      <span data-testid={`resource-${key}`} className="font-semibold text-foreground">{label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Objectives real-time */}
               <div>
-                <p className="text-[8px] text-[var(--text-muted)] uppercase tracking-widest mb-1.5">{t('Objektif')}</p>
+                <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">{t('Objektif')}</p>
                 <div className="space-y-2">
                   {objResults.map((obj) => (
                     <div key={`${obj.metric}-${obj.target}`}>
-                      <div className="flex items-start gap-1 mb-0.5">
-                        <span className="text-[10px] flex-shrink-0 mt-0.5">{obj.done ? '✅' : '⬜'}</span>
-                        <p className="text-[8px] leading-tight" style={{ color: obj.done ? 'var(--accent-green)' : 'var(--text-secondary)' }}>
+                      <div className="mb-0.5 flex items-start gap-1">
+                        <span className="mt-0.5 flex-shrink-0 text-[11px]">{obj.done ? '✅' : '⬜'}</span>
+                        <p className="text-[10px] leading-tight" style={{ color: obj.done ? 'var(--accent-green)' : 'var(--text-secondary)' }}>
                           {obj.label}
                         </p>
                       </div>
-                      <p className="text-[7px] pl-3.5" style={{ color: obj.done ? 'var(--border-glow)' : 'var(--text-muted)' }}>
+                      <p className="pl-4 text-[9px]" style={{ color: obj.done ? 'var(--border-glow)' : 'var(--text-muted)' }}>
                         {obj.progress}
                       </p>
                     </div>
@@ -619,11 +709,11 @@ export default function GameplayClient({
               </div>
 
               {/* Event log */}
-              <div>
-                <p className="text-[8px] text-[var(--text-muted)] uppercase tracking-widest mb-1">{t('Log')}</p>
+              <div className="gameplay-log">
+                <p className="mb-1 text-[9px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">{t('Log')}</p>
                 <div className="space-y-1">
                   {logs.slice(0, 3).map((log) => (
-                    <p key={log.id} className="text-[8px] leading-tight" style={{ color: log.type === 'alert' ? 'var(--accent-red)' : log.type === 'success' ? 'var(--accent-green)' : 'var(--text-muted)' }}>
+                    <p key={log.id} className="text-[9px] leading-tight" style={{ color: log.type === 'alert' ? 'var(--accent-red)' : log.type === 'success' ? 'var(--accent-green)' : 'var(--text-muted)' }}>
                       {log.type === 'alert' ? '⚠' : log.type === 'success' ? '✓' : '›'} {log.message}
                     </p>
                   ))}
@@ -632,35 +722,76 @@ export default function GameplayClient({
             </div>
           </div>
 
-          {/* Center: isometric map */}
-          <div className="flex-1 overflow-hidden relative">
-            <IsometricMap
-              pollution={status.pollution}
-              biodiversity={status.biodiversity}
-              waterQuality={status.waterQuality}
-              trees={status.trees}
-              onAction={registerMapAction}
-              onTileClick={(type) => {
-                play('tile')
-                const msgs: Record<string, string> = {
-                  water:    t('Sungai — scan kualitas air'),
-                  grass:    t('Area hijau — cocok untuk pohon'),
-                  tree:     t('Pohon teridentifikasi'),
-                  polluted: t('Area tercemar — perlu dibersihkan!'),
-                  dirt:     t('Tanah kosong'),
-                }
-                pushLog(
-                  type === 'polluted' ? 'alert' : 'info',
-                  msgs[type] ?? t('Tile {type}', { type })
-                )
-              }}
-            />
-          </div>
+          {/* Center: isometric map + action bar */}
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            <div className="relative flex-1 overflow-hidden">
+              <IsometricMap
+                pollution={status.pollution}
+                biodiversity={status.biodiversity}
+                waterQuality={status.waterQuality}
+                trees={status.trees}
+                onAction={registerMapAction}
+                onTileClick={(type) => {
+                  play('tile')
+                  const msgs: Record<string, string> = {
+                    water:    t('Sungai — scan kualitas air'),
+                    grass:    t('Area hijau — cocok untuk pohon'),
+                    tree:     t('Pohon teridentifikasi'),
+                    polluted: t('Area tercemar — perlu dibersihkan!'),
+                    dirt:     t('Tanah kosong'),
+                  }
+                  pushLog(
+                    type === 'polluted' ? 'alert' : 'info',
+                    msgs[type] ?? t('Tile {type}', { type })
+                  )
+                }}
+              />
 
-          {/* Right: action buttons (vertical) */}
-          <div className="flex flex-col border-l overflow-y-auto flex-shrink-0" style={{ width: '72px', borderColor: 'var(--border-card)', background: 'var(--bg-card)' }}>
-            <p className="text-[8px] text-[var(--text-muted)] uppercase tracking-widest text-center py-1.5 border-b flex-shrink-0" style={{ borderColor: 'var(--border-card)' }}>{t('Aksi')}</p>
-            <div className="flex flex-col gap-1 p-1.5 flex-1">
+              {/* Action feedback pill */}
+              <div
+                className="pointer-events-none absolute inset-x-0 top-2 z-10 flex justify-center px-2"
+                aria-live="polite"
+              >
+                {actionFeedback && (
+                  <div
+                    key={actionFeedback.id}
+                    data-testid="action-feedback"
+                    className="feedback-pop flex max-w-[92%] items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold shadow-lg"
+                    style={{
+                      background: 'rgba(10, 34, 26, 0.92)',
+                      borderColor: 'var(--accent-teal)',
+                      color: 'var(--foreground)',
+                      boxShadow: 'var(--glow-teal)',
+                    }}
+                  >
+                    <span aria-hidden="true">{actionFeedback.emoji}</span>
+                    <span className="truncate">{actionFeedback.label}</span>
+                    {actionFeedback.detail && (
+                      <span className="truncate text-[10px] font-normal text-[var(--accent-amber)]">
+                        {actionFeedback.detail}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* First-time hint strip */}
+              {!hasActed && !missionComplete && !missionFailed && (
+                <div className="pointer-events-none absolute inset-x-0 bottom-10 z-10 flex justify-center px-2">
+                  <p className="rounded-full bg-[rgba(10,34,26,0.82)] px-3 py-1 text-center text-[10px] leading-none text-[var(--text-secondary)]">
+                    {t('💡 Ketuk peta untuk membaca tile, lalu pilih aksi di bawah.')}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Bottom action bar — all actions stay visible in landscape */}
+            <div
+              className="flex flex-shrink-0 gap-1 overflow-x-auto border-t p-1.5"
+              style={{ borderColor: 'var(--border-card)', background: 'var(--bg-card)' }}
+              role="group"
+              aria-label={t('Aksi')}
+            >
               {ACTIONS.map((definition) => {
                 const cost = ACTION_COSTS[definition.action]
                 const affordable = canAfford(cost, status)
@@ -682,8 +813,8 @@ export default function GameplayClient({
                             ? t('Sumber daya tidak cukup')
                             : undefined
                     }
-                    className="flex flex-col items-center justify-center rounded-lg p-1.5 text-center transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                    style={{ background: 'var(--surface-muted)', border: '1px solid var(--border-card)', minHeight: '52px' }}
+                    className="action-btn flex min-w-[56px] flex-1 flex-col items-center justify-center rounded-lg px-1 py-1 text-center transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                    style={{ background: 'var(--surface-muted)', border: '1px solid var(--border-card)', minHeight: '54px' }}
                     onMouseEnter={(e) => {
                       if (!enabled) return
                       e.currentTarget.style.borderColor = 'var(--border-glow)'
@@ -694,9 +825,13 @@ export default function GameplayClient({
                       e.currentTarget.style.background = 'var(--surface-muted)'
                     }}
                   >
-                    <span className="text-lg leading-none mb-0.5">{definition.emoji}</span>
-                    <span className="text-[8px] text-foreground font-medium leading-tight">{t(definition.label)}</span>
-                    <span className="text-[7px] mt-0.5" style={{ color: affordable ? 'var(--text-muted)' : 'var(--accent-red)' }}>{formatCost(cost)}</span>
+                    <span className="text-base leading-none">{definition.emoji}</span>
+                    <span className="mt-0.5 text-[9px] font-semibold leading-tight text-foreground">
+                      {t(definition.label)}
+                    </span>
+                    <span className="text-[8px]" style={{ color: affordable ? 'var(--text-muted)' : 'var(--accent-red)' }}>
+                      {formatCost(cost)}
+                    </span>
                   </button>
                 )
               })}

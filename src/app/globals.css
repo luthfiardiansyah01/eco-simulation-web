@@ -166,6 +166,40 @@ body {
   transform: translateY(-2px);
 }
 
+/* Touch devices keep a hover state after a tap, so only lift cards when a
+   real pointer can hover. */
+@media (hover: none), (pointer: coarse) {
+  .eco-card:hover,
+  .card-lift:hover {
+    transform: none;
+  }
+}
+
+.card-lift {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .card-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--glow-teal);
+  }
+}
+
+@keyframes feedback-pop {
+  0% { opacity: 0; transform: translateY(-6px) scale(0.94); }
+  55% { opacity: 1; transform: translateY(0) scale(1.03); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes modal-pop {
+  0% { opacity: 0; transform: translateY(10px) scale(0.97); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.feedback-pop { animation: feedback-pop 0.28s ease-out; }
+.modal-pop { animation: modal-pop 0.22s ease-out; }
+
 .eco-btn-primary {
   background: linear-gradient(135deg, #16a34a, #0d9488);
   border: none;
@@ -234,7 +268,13 @@ body {
 
 .locked-overlay {
   background: var(--locked-overlay);
-  backdrop-filter: blur(2px);
+}
+
+/* Badges that sit on top of bright artwork need their own dark plate. */
+.chip-on-image {
+  background: rgba(8, 24, 18, 0.78);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 .region-hero-green {
@@ -258,4 +298,49 @@ body {
   );
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s infinite;
+}
+
+/* Respect the OS motion preference: keep feedback visible but stop looping
+   and one-shot decorative animation. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .glow-pulse,
+  .float,
+  .shimmer-text,
+  .skeleton-shimmer {
+    animation: none !important;
+  }
+
+  .eco-card:hover,
+  .card-lift:hover {
+    transform: none;
+  }
+}
+
+/* Keyboard users get a clear focus ring without changing the mouse look. */
+:focus-visible {
+  outline: 2px solid var(--accent-teal);
+  outline-offset: 2px;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The gameplay log is decorative; drop it when vertical space is tight so the
+   environment bars and objectives stay visible. Portrait gameplay is rotated,
+   so its effective height is the viewport width. */
+@media (max-height: 430px), (orientation: portrait) {
+  .gameplay-log {
+    display: none;
+  }
 }
